@@ -22,5 +22,4 @@ void ggz::opencv_face_detection(const std::string& model, const std::string& pat
     cv::imshow("FaceImage", image);
     cv::waitKey(0);
     cv::destroyWindow("FaceImage");
-    image.release();
 }

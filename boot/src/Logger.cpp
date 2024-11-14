@@ -7,6 +7,8 @@
 #include "spdlog/sinks/daily_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
+#include "opencv2/core/utils/logger.hpp"
+
 static size_t duration{ 0LL };
 
 void ggz::logger::init() {
@@ -31,6 +33,12 @@ void ggz::logger::init() {
     logger->flush_on(spdlog::level::warn);
     logger->set_pattern("[%D %T] [%L] [%t] [%s:%#] %v");
     spdlog::set_default_logger(logger);
+    #if defined(_DEBUG) || !defined(NDEBUG)
+    ::cv::utils::logging::setLogLevel(::cv::utils::logging::LOG_LEVEL_WARNING);
+    // ::cv::utils::logging::setLogLevel(::cv::utils::logging::LOG_LEVEL_DEBUG);
+    #else
+    ::cv::utils::logging::setLogLevel(::cv::utils::logging::LOG_LEVEL_INFO);
+    #endif
     SPDLOG_DEBUG(R"(
         
         北方有佳人，绝世而独立。

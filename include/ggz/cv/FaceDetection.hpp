@@ -5,6 +5,8 @@
 
 namespace ggz {
 
+extern void dlib_face_detection();
+
 extern void yolo_face_detection();
 
 extern void opencv_face_detection(const std::string& model, const std::string& path);
