@@ -16,8 +16,6 @@ endif()
 
 option(BUILD_SHARED_LIBS "是否编译为共享库" OFF)
 
-set(HEADER_DIR include/)
-
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # https://cmake.org/cmake/help/latest/prop_tgt/C_STANDARD.html
@@ -62,16 +60,6 @@ endif()
 message(STATUS "当前模式: ${CMAKE_BUILD_TYPE}")
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
-    message(STATUS "C_FLAGS : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
-    message(STATUS "C++FLAGS: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
-else()
-    add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO)
-    message(STATUS "C_FLAGS : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}")
-    message(STATUS "C++FLAGS: ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
-endif()
-
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
     set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install)
 endif()
 
@@ -86,3 +74,30 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/Release/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
+
+if(CMAKE_HOST_WIN32)
+    set(
+        CMAKE_PREFIX_PATH
+        ${CMAKE_PREFIX_PATH}
+        deps/opencv
+        deps/spdlog
+    )
+
+    if(CMAKE_BUILD_TYPE MATCHES "Debug")
+        file(GLOB SPDLOG_DLLS "deps/spdlog/debug/bin/*.dll")
+        file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100d.dll")
+    else()
+        file(GLOB SPDLOG_DLLS "deps/spdlog/bin/*.dll")
+        file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100.dll")
+    endif()
+endif()
+
+find_package(OpenCV REQUIRED)
+find_package(spdlog REQUIRED)
+
+include_directories(include)
+
+add_subdirectory(cv)
+add_subdirectory(nlp)
+add_subdirectory(boot)
+add_subdirectory(deps)

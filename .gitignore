@@ -9,7 +9,9 @@
 
 .vscode
 
-deps
 logs
 build
 target
+
+deps/opencv
+deps/spdlog
