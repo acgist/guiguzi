@@ -1,7 +1,18 @@
 add_executable(
+    testVideoCapture
+    src/video-capture/Main.cpp
+)
+add_test(NAME testVideoCapture COMMAND testVideoCapture)
+set_target_properties(testVideoCapture PROPERTIES FOLDER "cv")
+target_link_libraries(
+    testVideoCapture
+    ggzboot
+)
+
+add_executable(
     testFaceDetection
     src/face-detection/Main.cpp
-    src/face-detection/FDYolo.cpp
+    src/face-detection/FDOnnx.cpp
     src/face-detection/FDOpenCV.cpp
     src/face-detection/FDLibTorch.cpp
 )

@@ -48,11 +48,12 @@ print("转换成功")
 * https://www.cnblogs.com/kods/p/15119831.html
 * https://cloud.tencent.com/developer/article/2366473
 * https://blog.csdn.net/lucifer479/article/details/120743124
+* https://github.com/ultralytics/ultralytics/tree/main/examples/YOLOv8-CPP-Inference
+* https://github.com/ultralytics/ultralytics/tree/main/examples/YOLOv8-ONNXRuntime-CPP
+* https://github.com/ultralytics/ultralytics/tree/main/examples/YOLOv8-LibTorch-CPP-Inference
 
 #### 模型
 
-* yolov5s.pt
-* yolov8n_face.pt
 * yolo11n.pt
 * yolo11s.pt
 * yolo11m.pt
