@@ -15,3 +15,5 @@ target
 
 deps/opencv
 deps/spdlog
+deps/libtorch
+deps/onnxruntime

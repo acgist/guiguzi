@@ -82,6 +82,7 @@ if(CMAKE_HOST_WIN32)
         ${CMAKE_PREFIX_PATH}
         deps/opencv
         deps/spdlog
+        deps/libtorch
     )
 
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -91,12 +92,15 @@ if(CMAKE_HOST_WIN32)
         file(GLOB SPDLOG_DLLS "deps/spdlog/bin/*.dll")
         file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100.dll")
     endif()
+    file(GLOB TORCH_DLLS       "deps/libtorch/lib/*.dll")
+    file(GLOB ONNXRUNTIME_DLLS "deps/onnxruntime/lib/*.dll")
 endif()
 
+find_package(Torch  REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
 
-include_directories(include)
+include_directories(include deps/onnxruntime/include())
 
 add_subdirectory(cv)
 add_subdirectory(nlp)

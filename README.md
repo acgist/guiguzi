@@ -2,6 +2,7 @@
 
 `AI`学习
 
-* dlib
+* ONNX
 * YOLO
 * OpenCV
+* LibTorch

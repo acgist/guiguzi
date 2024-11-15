@@ -12,6 +12,8 @@ if(CMAKE_HOST_WIN32)
         ${PROJECT_NAME}
         spdlog::spdlog
         ${OpenCV_LIBS}
+        ${TORCH_LIBRARIES}
+        D:/gitee/ggz/deps/onnxruntime/lib/onnxruntime.lib
     )
 else()
     target_link_libraries(
@@ -19,6 +21,7 @@ else()
         fmt
         spdlog
         ${OpenCV_LIBS}
+        ${TORCH_LIBRARIES}
     )
 endif()
 
@@ -31,7 +34,9 @@ if(CMAKE_HOST_WIN32)
 
     add_custom_command(
         TARGET ggz POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_DLLS} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPDLOG_DLLS} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TORCH_DLLS}       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPDLOG_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ONNXRUNTIME_DLLS} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     )
 endif()

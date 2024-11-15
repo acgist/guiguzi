@@ -5,8 +5,6 @@
 
 namespace ggz {
 
-extern void dlib_face_recognition();
-
 extern void yolo_face_recognition();
 
 extern double opencv_face_recognition(const std::string& source, const std::string& target);
