@@ -72,14 +72,17 @@ model.to("cuda")
 torch.save(model, PATH)
 model = torch.load(PATH)
 
-# 模型参数：需要结构
+# 模型参数
 torch.save(model.state_dict(), PATH)
 model.load_state_dict(torch.load(PATH))
 
 # onnx
 model.export(format="onnx", simplify=True)
-
-# libtorch
+# TensorRT
+model.export(format="engine")
+# OpenVINO
+model.export(format="openvino")
+# LibTorch
 model.export(format="torchscript")
 
 # onnx

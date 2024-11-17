@@ -6,3 +6,6 @@
 * YOLO
 * OpenCV
 * LibTorch
+* TensorRT
+* OpenVINO
+

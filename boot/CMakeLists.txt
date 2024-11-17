@@ -1,4 +1,4 @@
-project(ggzboot VERSION 1.0.0 LANGUAGES C CXX)
+project(guiguziboot VERSION 1.0.0 LANGUAGES C CXX)
 
 add_library(
     ${PROJECT_NAME}
@@ -13,7 +13,8 @@ if(CMAKE_HOST_WIN32)
         spdlog::spdlog
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}
-        D:/gitee/ggz/deps/onnxruntime/lib/onnxruntime.lib
+        # TODO 修改
+        D:/gitee/guiguzi/deps/onnxruntime/lib/onnxruntime.lib
     )
 else()
     target_link_libraries(
@@ -25,7 +26,7 @@ else()
     )
 endif()
 
-add_executable(ggz src/Main.cpp)
+add_executable(guiguzi src/Main.cpp)
 
 if(CMAKE_HOST_WIN32)
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -33,7 +34,7 @@ if(CMAKE_HOST_WIN32)
     endif()
 
     add_custom_command(
-        TARGET ggz POST_BUILD
+        TARGET guiguzi POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TORCH_DLLS}       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPDLOG_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

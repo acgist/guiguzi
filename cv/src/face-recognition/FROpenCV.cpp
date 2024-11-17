@@ -1,4 +1,4 @@
-#include "ggz/cv/FaceRecognition.hpp"
+#include "guiguzi/cv/FaceRecognition.hpp"
 
 #include <vector>
 
@@ -40,11 +40,11 @@ static double opencv_face_recognition(const cv::Mat& source, const cv::Mat& targ
     return cv::compareHist(sourceHist, targetHist, CV_COMP_CORREL);
 }
 
-double ggz::opencv_face_recognition(const std::string& source, const std::string& target) {
+double guiguzi::opencv_face_recognition(const std::string& source, const std::string& target) {
     return ::opencv_face_recognition(cv::imread(source), cv::imread(target));
 }
 
-void ggz::opencv_face_recognition(const std::string& model, const std::string& path, const std::string& face) {
+void guiguzi::opencv_face_recognition(const std::string& model, const std::string& path, const std::string& face) {
     cv::Mat image = cv::imread(path);
     cv::Mat target = cv::imread(face);
     cv::CascadeClassifier classifier;

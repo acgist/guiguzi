@@ -1,4 +1,4 @@
-#include "ggz/cv/FaceDetection.hpp"
+#include "guiguzi/cv/FaceDetection.hpp"
 
 #include <vector>
 #include <random>
@@ -199,7 +199,7 @@ static void simple(const std::string& model, const std::string& path) {
     cv::destroyWindow("FaceImage");
 }
 
-void ggz::opencv_face_detection(const std::string& model, const std::string& path) {
+void guiguzi::opencv_face_detection(const std::string& model, const std::string& path) {
     dnn(model, path);
     // simple(model, path);
 }

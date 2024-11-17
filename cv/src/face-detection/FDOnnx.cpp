@@ -5,8 +5,9 @@
  * https://github.com/ultralytics/ultralytics/blob/main/examples/YOLOv8-ONNXRuntime-CPP/inference.cpp
  */
 
-#include "ggz/cv/FaceDetection.hpp"
+#include "guiguzi/cv/FaceDetection.hpp"
 
+#include "opencv2/dnn.hpp"
 #include "opencv2/opencv.hpp"
 
 #include "onnxruntime_cxx_api.h"
@@ -40,13 +41,15 @@ static Ort::RunOptions options { nullptr };
 
 static std::vector<std::string> classes{};
 
-static float rectConfidenceThreshold;
+static float rectConfidenceThreshold = 0.1F;
 static float iouThreshold;
 static float resizeScales;
 
 static MODEL_TYPE modelType = MODEL_TYPE::YOLO_DETECT_V8;
 
 static std::vector<int> imgSize{ 640, 640 };
+
+static cv::Size2f modelShape = cv::Size(640, 640);
 
 static std::vector<const char*> inputNodeNames;
 static std::vector<const char*> outputNodeNames;
@@ -92,6 +95,7 @@ static void PreProcess(cv::Mat& iImg, std::vector<int> iImgSize, cv::Mat& oImg)
     case MODEL_TYPE::YOLO_DETECT_V8_HALF:
     case MODEL_TYPE::YOLO_POSE_V8_HALF://LetterBox
     {
+        // cv::imshow("a1", iImg.clone());
         if (iImg.cols >= iImg.rows)
         {
             resizeScales = iImg.cols / (float)iImgSize.at(0);
@@ -99,12 +103,14 @@ static void PreProcess(cv::Mat& iImg, std::vector<int> iImgSize, cv::Mat& oImg)
         }
         else
         {
-            resizeScales = iImg.rows / (float)iImgSize.at(0);
+            resizeScales = iImg.rows / (float)iImgSize.at(1);
             cv::resize(oImg, oImg, cv::Size(int(iImg.cols / resizeScales), iImgSize.at(1)));
         }
+        // cv::imshow("a2", iImg.clone());
         cv::Mat tempImg = cv::Mat::zeros(iImgSize.at(0), iImgSize.at(1), CV_8UC3);
         oImg.copyTo(tempImg(cv::Rect(0, 0, oImg.cols, oImg.rows)));
         oImg = tempImg;
+        // cv::imshow("a3", iImg.clone());
         break;
     }
     case MODEL_TYPE::YOLO_CLS://CenterCrop
@@ -214,7 +220,7 @@ static void createSession() {
     sessionOption.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     sessionOption.SetIntraOpNumThreads(1);
     sessionOption.SetLogSeverityLevel(3);
-    const wchar_t* modelPath = L"D:/tmp/face/yolov5su.onnx";
+    const wchar_t* modelPath = L"D:/tmp/face/yolo11n.onnx";
     session = new Ort::Session(*env, modelPath, sessionOption);
     Ort::AllocatorWithDefaultOptions allocator;
     size_t inputNodesNum = session->GetInputCount();
@@ -240,15 +246,20 @@ static void createSession() {
     PreProcess(iImg, imgSize, processedImg);
     if (static_cast<int>(modelType) < 4)
     {
-        float* blob = new float[iImg.total() * 3];
-        BlobFromImage(processedImg, blob);
+        cv::Mat blob;
+        // float* blob = new float[iImg.total() * 3];
+        // BlobFromImage(processedImg, blob);
+        cv::dnn::blobFromImage(processedImg, blob, 1.0 / 255.0, modelShape, cv::Scalar(), true, false);
         std::vector<int64_t> YOLO_input_node_dims = { 1, 3, imgSize.at(0), imgSize.at(1) };
         Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
-            Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), blob, 3 * imgSize.at(0) * imgSize.at(1),
+            Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), reinterpret_cast<float*>(blob.data), 3 * imgSize.at(0) * imgSize.at(1),
             YOLO_input_node_dims.data(), YOLO_input_node_dims.size());
+        // Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+        //     Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), blob, 3 * imgSize.at(0) * imgSize.at(1),
+        //     YOLO_input_node_dims.data(), YOLO_input_node_dims.size());
         auto output_tensors = session->Run(options, inputNodeNames.data(), &input_tensor, 1, outputNodeNames.data(),
             outputNodeNames.size());
-        delete[] blob;
+        // delete[] blob;
         clock_t starttime_4 = clock();
         double post_process_time = (double)(starttime_4 - starttime_1) / CLOCKS_PER_SEC * 1000;
     }
@@ -364,19 +375,36 @@ static void TensorProcess(cv::Mat& iImg, N& blob, std::vector<int64_t>& inputNod
     }
 }
 
+static cv::Mat formatToSquare(const cv::Mat &source) {
+    int col = source.cols;
+    int row = source.rows;
+    int _max = MAX(col, row);
+    cv::Mat result = cv::Mat::zeros(_max, _max, CV_8UC3);
+    source.copyTo(result(cv::Rect(0, 0, col, row)));
+    return result;
+}
+
 static void RunSession(cv::Mat& iImg, std::vector<DL_RESULT>& oResult) {
+    // cv::Mat processedImg = iImg;
     cv::Mat processedImg;
     PreProcess(iImg, imgSize, processedImg);
     if (static_cast<int>(modelType) < 4)
     {
-        float* blob = new float[processedImg.total() * 3];
-        BlobFromImage(processedImg, blob);
+        // float* blob = new float[processedImg.total() * 3];
+        // BlobFromImage(processedImg, blob);
         std::vector<int64_t> inputNodeDims = { 1, 3, imgSize.at(0), imgSize.at(1) };
+        if (modelShape.width == modelShape.height) {
+            processedImg = formatToSquare(processedImg);
+        }
+        cv::Mat ret;
+        cv::dnn::blobFromImage(processedImg, ret, 1.0 / 255.0, modelShape, cv::Scalar(), true, false);
+        float* blob = reinterpret_cast<float*>(ret.data);
         TensorProcess(iImg, blob, inputNodeDims, oResult);
+        // delete[] blob;
     }
 }
 
-void ggz::onnx_face_detection() {
+void guiguzi::onnx_face_detection() {
     createSession();
     std::string img_path = "D:/tmp/F4.jpg";
     cv::Mat img = cv::imread(img_path);

@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.22.0)
 
 #[[
     鬼谷子
-    https://gitee.com/acgist/ggz
-    https://github.com/acgist/ggz
+    https://gitee.com/acgist/guiguzi
+    https://github.com/acgist/guiguzi
 ]]
 
 # https://cmake.org/cmake/help/latest/
 
-project(ggz-project VERSION 1.0.0 LANGUAGES C CXX)
+project(guiguzi-project VERSION 1.0.0 LANGUAGES C CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)

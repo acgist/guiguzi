@@ -1,4 +1,4 @@
-#include "ggz/Logger.hpp"
+#include "guiguzi/Logger.hpp"
 
 #include <chrono>
 
@@ -11,7 +11,7 @@
 
 static size_t duration{ 0LL };
 
-void ggz::logger::init() {
+void guiguzi::logger::init() {
     ::duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     std::vector<spdlog::sink_ptr> sinks{};
     // 开发日志
@@ -21,10 +21,10 @@ void ggz::logger::init() {
     sinks.push_back(stdoutColorSinkSPtr);
     #endif
     // 文件日志
-    auto dailyFileSinkSPtr = std::make_shared<spdlog::sinks::daily_file_sink_mt>("../logs/ggz.log", 0, 0, false, 7);
+    auto dailyFileSinkSPtr = std::make_shared<spdlog::sinks::daily_file_sink_mt>("../logs/guiguzi.log", 0, 0, false, 7);
     sinks.push_back(dailyFileSinkSPtr);
     // 默认日志
-    auto logger = std::make_shared<spdlog::logger>("ggzLogger", sinks.begin(), sinks.end());
+    auto logger = std::make_shared<spdlog::logger>("guiguziLogger", sinks.begin(), sinks.end());
     #if defined(_DEBUG) || !defined(NDEBUG)
     logger->set_level(spdlog::level::debug);
     #else
@@ -47,7 +47,7 @@ void ggz::logger::init() {
     )");
 }
 
-void ggz::logger::shutdown() {
+void guiguzi::logger::shutdown() {
     const size_t duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     SPDLOG_INFO("持续时间：{}", (duration - ::duration));
     SPDLOG_DEBUG(R"(

@@ -1,4 +1,4 @@
-#include "ggz/cv/FaceDetection.hpp"
+#include "guiguzi/cv/FaceDetection.hpp"
 
 #include "torch/torch.h"
 #include "torch/script.h"
@@ -17,7 +17,6 @@ float generate_scale(cv::Mat& image, const std::vector<int>& target_size) {
     float resize_scale = std::min(ratio_h, ratio_w);
     return resize_scale;
 }
-
 
 float letterbox(cv::Mat &input_image, cv::Mat &output_image, const std::vector<int> &target_size) {
     if (input_image.cols == target_size[1] && input_image.rows == target_size[0]) {
@@ -196,7 +195,7 @@ torch::Tensor scale_boxes(const std::vector<int>& img1_shape, torch::Tensor& box
 }
 
 
-void ggz::libtorch_face_detection(const std::string& model, const std::string& path) {
+void guiguzi::libtorch_face_detection(const std::string& model, const std::string& path) {
     // Device
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA :torch::kCPU);
 
