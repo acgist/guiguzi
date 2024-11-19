@@ -1,4 +1,15 @@
 add_executable(
+    testHelmet
+    src/helmet/Main.cpp
+)
+add_test(NAME testHelmet COMMAND testHelmet)
+set_target_properties(testHelmet PROPERTIES FOLDER "cv")
+target_link_libraries(
+    testHelmet
+    guiguziboot
+)
+
+add_executable(
     testOpenCV
     src/opencv/Main.cpp
 )
