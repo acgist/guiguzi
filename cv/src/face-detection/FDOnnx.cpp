@@ -41,7 +41,7 @@ static Ort::RunOptions options { nullptr };
 
 static std::vector<std::string> classes{};
 
-static float rectConfidenceThreshold = 0.1F;
+static float rectConfidenceThreshold = 0.2F;
 static float iouThreshold;
 static float resizeScales;
 
@@ -220,7 +220,8 @@ static void createSession() {
     sessionOption.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     sessionOption.SetIntraOpNumThreads(1);
     sessionOption.SetLogSeverityLevel(3);
-    const wchar_t* modelPath = L"D:/tmp/face/yolo11n.onnx";
+    const wchar_t* modelPath = L"D:/tmp/face/yolov5su.onnx";
+    // const wchar_t* modelPath = L"D:/tmp/face/yolo11n.onnx";
     session = new Ort::Session(*env, modelPath, sessionOption);
     Ort::AllocatorWithDefaultOptions allocator;
     size_t inputNodesNum = session->GetInputCount();
@@ -240,29 +241,6 @@ static void createSession() {
         outputNodeNames.push_back(temp_buf);
     }
     options = Ort::RunOptions{ nullptr };
-    clock_t starttime_1 = clock();
-    cv::Mat iImg = cv::Mat(cv::Size(imgSize.at(0), imgSize.at(1)), CV_8UC3);
-    cv::Mat processedImg;
-    PreProcess(iImg, imgSize, processedImg);
-    if (static_cast<int>(modelType) < 4)
-    {
-        cv::Mat blob;
-        // float* blob = new float[iImg.total() * 3];
-        // BlobFromImage(processedImg, blob);
-        cv::dnn::blobFromImage(processedImg, blob, 1.0 / 255.0, modelShape, cv::Scalar(), true, false);
-        std::vector<int64_t> YOLO_input_node_dims = { 1, 3, imgSize.at(0), imgSize.at(1) };
-        Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
-            Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), reinterpret_cast<float*>(blob.data), 3 * imgSize.at(0) * imgSize.at(1),
-            YOLO_input_node_dims.data(), YOLO_input_node_dims.size());
-        // Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
-        //     Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU), blob, 3 * imgSize.at(0) * imgSize.at(1),
-        //     YOLO_input_node_dims.data(), YOLO_input_node_dims.size());
-        auto output_tensors = session->Run(options, inputNodeNames.data(), &input_tensor, 1, outputNodeNames.data(),
-            outputNodeNames.size());
-        // delete[] blob;
-        clock_t starttime_4 = clock();
-        double post_process_time = (double)(starttime_4 - starttime_1) / CLOCKS_PER_SEC * 1000;
-    }
 }
 
 template<typename N>
@@ -323,9 +301,9 @@ static void TensorProcess(cv::Mat& iImg, N& blob, std::vector<int64_t>& inputNod
                 float h = data[3];
 
                 int left = int((x - 0.5 * w) * resizeScales);
-                int top = int((y - 0.5 * h) * resizeScales);
+                int top  = int((y - 0.5 * h) * resizeScales);
 
-                int width = int(w * resizeScales);
+                int width  = int(w * resizeScales);
                 int height = int(h * resizeScales);
 
                 boxes.push_back(cv::Rect(left, top, width, height));
@@ -386,7 +364,7 @@ static cv::Mat formatToSquare(const cv::Mat &source) {
 static void RunSession(cv::Mat& iImg, std::vector<DL_RESULT>& oResult) {
     // cv::Mat processedImg;
     // PreProcess(iImg, imgSize, processedImg);
-    cv::Mat processedImg = iImg;
+    cv::Mat processedImg = iImg.clone();
     resizeScales = 1.0F * std::max(iImg.cols, iImg.rows) / 640;
     if (static_cast<int>(modelType) < 4)
     {

@@ -120,9 +120,9 @@ static void dnn(const std::string& model, const std::string& path) {
                     float h = data[3];
 
                     int left = int((x - 0.5 * w) * x_factor);
-                    int top = int((y - 0.5 * h) * y_factor);
+                    int top  = int((y - 0.5 * h) * y_factor);
 
-                    int width = int(w * x_factor);
+                    int width  = int(w * x_factor);
                     int height = int(h * y_factor);
 
                     boxes.push_back(cv::Rect(left, top, width, height));

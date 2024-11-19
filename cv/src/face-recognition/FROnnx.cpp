@@ -51,6 +51,7 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     auto tensor_info = typeInfo.GetTensorTypeAndShapeInfo();
     std::vector<int64_t> outputNodeDims = tensor_info.GetShape();
     auto output = outputTensor.front().GetTensorMutableData<typename std::remove_pointer<float*>::type>();
+    // TODO: 多个结果是否需要转置
     // 转换
     int signalResultNum = outputNodeDims[1]; // 20
     int strideNum       = outputNodeDims[2]; // 8400
@@ -317,6 +318,6 @@ void guiguzi::onnx_face_recognition() {
 
     // cv::imshow("frame1", frame1);
     // cv::imshow("output1", output1);
-    // cv::waitKey(0);
+    cv::waitKey(0);
     releaseSession();
 }

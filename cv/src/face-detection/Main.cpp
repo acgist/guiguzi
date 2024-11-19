@@ -9,8 +9,8 @@
 }
 
 [[maybe_unused]] static void testOpenCV() {
-    guiguzi::opencv_face_detection("D:/tmp/face/yolo11n.onnx", "D:/tmp/F4.jpg");
-    // guiguzi::opencv_face_detection("D:/tmp/face/yolov5su.onnx", "D:/tmp/F4.jpg");
+    // guiguzi::opencv_face_detection("D:/tmp/face/yolo11n.onnx", "D:/tmp/F4.jpg");
+    guiguzi::opencv_face_detection("D:/tmp/face/yolov5su.onnx", "D:/tmp/F4.jpg");
     // guiguzi::opencv_face_detection("D:/tmp/face/yolov5su.onnx", "D:/tmp/face/zidane.jpg");
     // guiguzi::opencv_face_detection("D:/gitee/guiguzi/deps/opencv/etc/haarcascades/haarcascade_frontalface_default.xml", "D:/tmp/F4.jpg");
     // guiguzi::opencv_face_detection("D:/gitee/guiguzi/deps/opencv/etc/haarcascades/haarcascade_frontalface_default.xml", "D:/tmp/F4.jpg");
