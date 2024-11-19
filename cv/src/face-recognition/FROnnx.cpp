@@ -167,15 +167,15 @@ static std::vector<float> preProcess(cv::Mat& source, cv::Mat& target) {
             int pos = (face.cols - min) / 2;
             double scale = 1.0 * min / 112;
             for(auto& p : points) {
-                p.x = (p.x - pos) / scale;
-                p.y = p.y / scale;
+                p.x = (p.x - rect.x - pos) / scale;
+                p.y = (p.y - rect.y) / scale;
             }
         } else {
             int pos = (face.rows - min) / 2;
             double scale = 1.0 * min / 112;
             for(auto& p : points) {
-                p.x = p.x / scale;
-                p.y = (p.y - pos) / scale;
+                p.x = (p.x - rect.x) / scale;
+                p.y = (p.y - rect.y - pos) / scale;
             }
         }
         cv::Rect rect((face.cols - min) / 2, (face.rows - min) / 2, min, min);
@@ -207,8 +207,10 @@ static std::vector<float> preProcess(cv::Mat& source, cv::Mat& target) {
     //     i++;
     // }
     guiguzi::onnx_face_feature_center(face, points);
-    return guiguzi::onnx_face_feature(face);
+    auto feature = guiguzi::onnx_face_feature(face);
+    // cv::waitKey(0);
     // delete[] blob;
+    return feature;
 }
 
 static void createSession() {
@@ -263,23 +265,58 @@ void guiguzi::onnx_face_recognition() {
     // camera.release();
 
     // cv::Mat frame = cv::imread("D:/tmp/F4.jpg");
-    // cv::Mat frame = cv::imread("D:/tmp/face/1.png");
-    // cv::Mat frame = cv::imread("D:/tmp/face/2.png");
-    cv::Mat frame1 = cv::imread("D:/tmp/face/1.png");
+
+    cv::Mat frame1 = cv::imread("D:/tmp/face/y1.jpg");
     cv::Mat output1;
     auto v1 = preProcess(frame1, output1);
-    cv::Mat frame2 = cv::imread("D:/tmp/face/2.png");
+    // cv::Mat frame2 = cv::imread("D:/tmp/face/y2.jpg");
+    cv::Mat frame2 = cv::imread("D:/tmp/face/y4.jpg");
     cv::Mat output2;
     auto v2 = preProcess(frame2, output2);
-    cv::Mat frame3 = cv::imread("D:/tmp/face/.png");
+    // cv::Mat frame3 = cv::imread("D:/tmp/face/y3.jpg");
+    cv::Mat frame3 = cv::imread("D:/tmp/face/y5.jpg");
     cv::Mat output3;
     auto v3 = preProcess(frame3, output3);
-    auto d1 = guiguzi::onnx_face_feature_diff(v1, v2);
-    SPDLOG_DEBUG("{}", d1);
-    auto d2 = guiguzi::onnx_face_feature_diff(v2, v3);
-    SPDLOG_DEBUG("{}", d2);
+
+    // cv::Mat frame1 = cv::imread("D:/tmp/face/1.png");
+    // cv::Mat output1;
+    // auto v1 = preProcess(frame1, output1);
+    // cv::Mat frame2 = cv::imread("D:/tmp/face/2.png");
+    // cv::Mat output2;
+    // auto v2 = preProcess(frame2, output2);
+    // cv::Mat frame3 = cv::imread("D:/tmp/face/3.png");
+    // cv::Mat output3;
+    // auto v3 = preProcess(frame3, output3);
+
+    cv::Mat cframe1 = cv::imread("D:/tmp/face/c1.png");
+    cv::Mat coutput1;
+    auto cv1 = preProcess(cframe1, coutput1);
+    cv::Mat cframe2 = cv::imread("D:/tmp/face/c2.png");
+    cv::Mat coutput2;
+    auto cv2 = preProcess(cframe2, coutput2);
+    cv::Mat cframe3 = cv::imread("D:/tmp/face/c3.png");
+    cv::Mat coutput3;
+    auto cv3 = preProcess(cframe3, coutput3);
+
+    auto d12 = guiguzi::onnx_face_feature_diff(v1, v2);
+    SPDLOG_DEBUG("{}", d12);
+    auto d23 = guiguzi::onnx_face_feature_diff(v2, v3);
+    SPDLOG_DEBUG("{}", d23);
+    auto d13 = guiguzi::onnx_face_feature_diff(v1, v3);
+    SPDLOG_DEBUG("{}", d13);
+
+    auto cd12 = guiguzi::onnx_face_feature_diff(cv1, cv2);
+    SPDLOG_DEBUG("{}", cd12);
+    auto cd23 = guiguzi::onnx_face_feature_diff(cv2, cv3);
+    SPDLOG_DEBUG("{}", cd23);
+    auto cd13 = guiguzi::onnx_face_feature_diff(cv1, cv3);
+    SPDLOG_DEBUG("{}", cd13);
+
+    auto cv = guiguzi::onnx_face_feature_diff(v1, cv3);
+    SPDLOG_DEBUG("{}", cv);
+
     // cv::imshow("frame1", frame1);
     // cv::imshow("output1", output1);
-    cv::waitKey(0);
+    // cv::waitKey(0);
     releaseSession();
 }

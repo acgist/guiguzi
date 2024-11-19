@@ -111,21 +111,22 @@ void guiguzi::onnx_face_feature_center(const cv::Mat& source, std::vector<cv::Po
     auto M = cv::estimateAffinePartial2D(s, t);
     cv::imshow("bs1", source.clone());
     cv::warpAffine(source, source, M, source.size());
+    // cv::warpAffine(source, source, M, source.size(), 1, CV_HAL_BORDER_REPLICATE, { 255, 255, 255 });
     // cv::warpAffine(source, source, M, cv::Size(112, 112), 3.0);
     cv::imshow("bs2", source.clone());
-    cv::waitKey(0);
+    // cv::waitKey(0);
 }
 
 std::vector<float> guiguzi::onnx_face_feature(const cv::Mat& face) {
     if(!session) {
         createSession();
     }
-    cv::imshow("face", face);
+    // cv::imshow("face", face);
     auto min = std::min(face.rows, face.cols);
     cv::Rect rect((face.cols - min) / 2, (face.rows - min) / 2, min, min);
     cv::Mat input = face(rect);
     // cv::cvtColor(input, input, cv::COLOR_BGR2RGB);
     cv::resize(input, input, cv::Size(112, 112));
-    cv::imshow("input", input);
+    // cv::imshow("input", input);
     return postProcess(input);
 }

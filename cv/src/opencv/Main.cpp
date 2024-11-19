@@ -96,12 +96,18 @@
     cv::destroyAllWindows();
 }
 
+// constexpr int timeDuration() {
+//     return 1000 / 25;
+// }
+
+constexpr static int timeDuration = 1000 / 25;
+
 [[maybe_unused]] static void testFile() {
     cv::VideoCapture file("D:/tmp/video-copy.mp4");
     cv::Mat frame;
     while(file.read(frame)) {
         cv::imshow("camera", frame);
-        auto key = cv::waitKey(40);
+        auto key = cv::waitKey(timeDuration);
         if(key == 'q') {
             break;
         }
