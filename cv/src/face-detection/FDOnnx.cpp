@@ -277,7 +277,6 @@ static void TensorProcess(cv::Mat& iImg, N& blob, std::vector<int64_t>& inputNod
     auto tensor_info = typeInfo.GetTensorTypeAndShapeInfo();
     std::vector<int64_t> outputNodeDims = tensor_info.GetShape();
     auto output = outputTensor.front().GetTensorMutableData<typename std::remove_pointer<N>::type>();
-    delete[] blob;
     switch (modelType)
     {
     case MODEL_TYPE::YOLO_DETECT_V8:
@@ -385,9 +384,10 @@ static cv::Mat formatToSquare(const cv::Mat &source) {
 }
 
 static void RunSession(cv::Mat& iImg, std::vector<DL_RESULT>& oResult) {
-    // cv::Mat processedImg = iImg;
-    cv::Mat processedImg;
-    PreProcess(iImg, imgSize, processedImg);
+    // cv::Mat processedImg;
+    // PreProcess(iImg, imgSize, processedImg);
+    cv::Mat processedImg = iImg;
+    resizeScales = 1.0F * std::max(iImg.cols, iImg.rows) / 640;
     if (static_cast<int>(modelType) < 4)
     {
         // float* blob = new float[processedImg.total() * 3];

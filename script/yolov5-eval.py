@@ -8,6 +8,7 @@ im = "https://ultralytics.com/images/zidane.jpg"
 results = model(im)
 
 results.pandas().xyxy[0]
+
 #      xmin    ymin    xmax   ymax  confidence  class    name
 # 0  749.50   43.50  1148.0  704.5    0.874023      0  person
 # 1  433.50  433.50   517.5  714.5    0.687988     27     tie

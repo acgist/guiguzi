@@ -39,6 +39,7 @@ add_executable(
     src/face-recognition/Main.cpp
     src/face-recognition/FROnnx.cpp
     src/face-recognition/FROpenCV.cpp
+    src/face-recognition/FRFaceFeature.cpp
 )
 add_test(NAME testFaceRecognition COMMAND testFaceRecognition)
 set_target_properties(testFaceRecognition PROPERTIES FOLDER "cv")
