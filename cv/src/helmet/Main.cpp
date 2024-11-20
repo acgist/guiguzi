@@ -93,7 +93,9 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
         float* classesScores = data + 4;
         // 20 - 4
         cv::Point class_id;
-        float maxClassScore = data[4];
+        cv::Mat scores(1, 2, CV_32FC1, classesScores);
+        double maxClassScore;
+        cv::minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
         // for(int x = 0; x < signalResultNum; ++x) {
         //     SPDLOG_DEBUG("========== {}", data[x]);
         // }
@@ -120,6 +122,7 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     cv::dnn::NMSBoxes(boxes, confidences, 0.1, 0.0, nmsResult);
     for(const auto& i : nmsResult) {
         rest.push_back(boxes[i]);
+        SPDLOG_DEBUG("类型：{}", class_ids[i]);
     }
     return rest;
 }
@@ -141,19 +144,20 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
 int main() {
     guiguzi::logger::init();
     createSession();
-    // auto input = cv::imread("D:/tmp/helmet/train/1.jpg");
-    // // auto input = cv::imread("D:/tmp/helmet/val/34.jpg");
-    // run(input);
-    // cv::namedWindow("input", cv::WINDOW_NORMAL);
-    // cv::imshow("input", input);
-    cv::VideoCapture capture(0);
-    cv::Mat frame;
-    while(true) {
-        capture >> frame;
-        run(frame);
-        cv::imshow("input", frame);
-        cv::waitKey(10);
-    }
+    auto input = cv::imread("D:/tmp/helmet/train/1.jpg");
+    // auto input = cv::imread("D:/tmp/helmet/val/34.jpg");
+    run(input);
+    cv::namedWindow("input", cv::WINDOW_NORMAL);
+    cv::imshow("input", input);
+    // cv::VideoCapture capture(0);
+    // capture.isOpened();
+    // cv::Mat frame;
+    // while(true) {
+    //     capture >> frame;
+    //     run(frame);
+    //     cv::imshow("input", frame);
+    //     cv::waitKey(10);
+    // }
     cv::waitKey(0);
     guiguzi::logger::shutdown();
     return 0;

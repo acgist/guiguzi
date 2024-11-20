@@ -116,12 +116,39 @@ constexpr static int timeDuration = 1000 / 25;
     cv::destroyAllWindows();
 }
 
+[[maybe_unused]] static void testFileWrite() {
+    cv::VideoCapture capture(0);
+    cv::Mat frame;
+    cv::VideoWriter writer(
+        "D:/tmp/camera.mp4",
+        // vp90
+        // mjpg
+        // xvid
+        // h264/avc1
+        // h265/hevc
+        cv::VideoWriter::fourcc('m', 'p', '4', 'v'),
+        25,
+        cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+    );
+    while(capture.read(frame)) {
+        writer.write(frame);
+        cv::imshow("camera", frame);
+        auto key = cv::waitKey(1000 / 25);
+        if(key == 'q') {
+            break;
+        }
+    }
+    writer.release();
+    capture.release();
+}
+
 int main() {
     guiguzi::logger::init();
     // createWindow();
     // testBlobFromImage();
     // testCamera();
-    testFile();
+    // testFile();
+    testFileWrite();
     cv::waitKey(0);
     // while(true) {
     //     auto key = cv::waitKey(0);

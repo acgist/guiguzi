@@ -93,16 +93,15 @@ vim train.py
 ---
 from ultralytics import YOLO
  
-if __name__ == '__main__':
-    model = YOLO('yolo11n.pt')
-    model.train(
-        data       = '/data/yolo/ultralytics/data.yaml',
-        imgsz      = 640,
-        epochs     = 100,
-        single_cls = True,  
-        batch      = 16,
-        workers    = 10,
-        device     = '0',
-    )
+model = YOLO('yolo11n.pt')
+model.train(
+    data       = '/data/yolo/ultralytics/data.yaml',
+    imgsz      = 640,
+    epochs     = 100,
+    single_cls = True,  
+    batch      = 16,
+    workers    = 10,
+#   device     = 'cuda',
+)
 ---
 ```
