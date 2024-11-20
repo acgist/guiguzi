@@ -11,15 +11,17 @@ if(CMAKE_HOST_WIN32)
     target_link_libraries(
         ${PROJECT_NAME}
         spdlog::spdlog
+        ${FFMPEG_LIBS}
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}
-        # TODO 修改
-        D:/gitee/guiguzi/deps/onnxruntime/lib/onnxruntime.lib
+        ${ONNXRUNTIME_LIBS}
     )
 else()
     target_link_libraries(
         ${PROJECT_NAME}
         fmt
+        onnx
+        ffmpeg
         spdlog
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}

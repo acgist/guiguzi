@@ -13,6 +13,7 @@ logs
 build
 target
 
+deps/ffmpeg
 deps/opencv
 deps/spdlog
 deps/libtorch
