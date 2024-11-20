@@ -28,7 +28,11 @@ static std::vector<const char*> outputNodeNames;
     options.SetLogSeverityLevel(3);
     options.SetIntraOpNumThreads(1);
     options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+    #if _WIN32
     session = new Ort::Session(*env, L"D:/tmp/helmet/helment.onnx", options);
+    #else 
+    session = new Ort::Session(*env, "D:/tmp/helmet/helment.onnx", options);
+    #endif
     Ort::AllocatorWithDefaultOptions allocator;
     size_t inputNodesNum = session->GetInputCount();
     for (size_t i = 0; i < inputNodesNum; i++) {

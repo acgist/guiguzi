@@ -228,8 +228,12 @@ static void createSession() {
         delete session;
         session = nullptr;
     }
-    // session = new Ort::Session(*env, L"D:/tmp/face/yolov8n-face.onnx", sessionOption);
+    #if _WIN32
     session = new Ort::Session(*env, L"D:/tmp/face/yoloface_8n.onnx", sessionOption);
+    // session = new Ort::Session(*env, L"D:/tmp/face/yolov8n-face.onnx", sessionOption);
+    #else
+    session = new Ort::Session(*env, "D:/tmp/face/yoloface_8n.onnx", sessionOption);
+    #endif
     Ort::AllocatorWithDefaultOptions allocator;
     size_t inputNodesNum = session->GetInputCount();
     for (size_t i = 0; i < inputNodesNum; i++) {

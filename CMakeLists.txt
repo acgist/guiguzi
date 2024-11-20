@@ -76,7 +76,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 
-include_directories(include)
+set(
+    CMAKE_PREFIX_PATH
+    ${CMAKE_PREFIX_PATH}
+    deps/libtorch
+)
+
+include_directories(include deps/onnxruntime/include)
 
 if(CMAKE_HOST_WIN32)
     set(
@@ -85,7 +91,6 @@ if(CMAKE_HOST_WIN32)
         deps/ffmpeg
         deps/opencv
         deps/spdlog
-        deps/libtorch
     )
 
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -102,7 +107,7 @@ if(CMAKE_HOST_WIN32)
 
     file(GLOB ONNXRUNTIME_LIBS "deps/onnxruntime/lib/onnxruntime.lib")
 
-    include_directories(deps/ffmpeg/include deps/onnxruntime/include)
+    include_directories(deps/ffmpeg/include)
 endif()
 
 find_package(Torch  REQUIRED)

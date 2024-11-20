@@ -220,8 +220,12 @@ static void createSession() {
     sessionOption.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     sessionOption.SetIntraOpNumThreads(1);
     sessionOption.SetLogSeverityLevel(3);
+    #if _WIN32
     const wchar_t* modelPath = L"D:/tmp/face/yolov5su.onnx";
     // const wchar_t* modelPath = L"D:/tmp/face/yolo11n.onnx";
+    #else
+    const char_t* modelPath = "D:/tmp/face/yolov5su.onnx";
+    #endif
     session = new Ort::Session(*env, modelPath, sessionOption);
     Ort::AllocatorWithDefaultOptions allocator;
     size_t inputNodesNum = session->GetInputCount();

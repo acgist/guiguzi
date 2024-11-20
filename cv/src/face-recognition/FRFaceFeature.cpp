@@ -27,7 +27,11 @@ static void createSession() {
         delete session;
         session = nullptr;
     }
+    #if _WIN32
     session = new Ort::Session(*env, L"D:/tmp/face/arcface_w600k_r50.onnx", sessionOptions);
+    #else
+    session = new Ort::Session(*env, "D:/tmp/face/arcface_w600k_r50.onnx", sessionOptions);
+    #endif
     Ort::AllocatorWithDefaultOptions allocator;
     size_t inputNodesNum = session->GetInputCount();
     for (size_t i = 0; i < inputNodesNum; i++) {
