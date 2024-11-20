@@ -11,7 +11,6 @@ if(CMAKE_HOST_WIN32)
     target_link_libraries(
         ${PROJECT_NAME}
         spdlog::spdlog
-        ${FFMPEG_LIBS}
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}
         ${ONNXRUNTIME_LIBS}
@@ -21,7 +20,6 @@ else()
         ${PROJECT_NAME}
         fmt
         onnx
-        ffmpeg
         spdlog
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}
@@ -38,6 +36,7 @@ if(CMAKE_HOST_WIN32)
     add_custom_command(
         TARGET guiguzi POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TORCH_DLLS}       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FFMPEG_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SPDLOG_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ONNXRUNTIME_DLLS} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

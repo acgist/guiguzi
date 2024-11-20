@@ -76,34 +76,39 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 
+include_directories(include)
+
 if(CMAKE_HOST_WIN32)
     set(
         CMAKE_PREFIX_PATH
         ${CMAKE_PREFIX_PATH}
+        deps/ffmpeg
         deps/opencv
         deps/spdlog
         deps/libtorch
     )
 
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    file(GLOB FFMPEG_DLLS "deps/ffmpeg/debug/bin/*.dll")
         file(GLOB SPDLOG_DLLS "deps/spdlog/debug/bin/*.dll")
         file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100d.dll" "deps/opencv/x64/vc16/bin/opencv_videoio_ffmpeg4100_64.dll")
     else()
+        file(GLOB FFMPEG_DLLS "deps/ffmpeg/bin/*.dll")
         file(GLOB SPDLOG_DLLS "deps/spdlog/bin/*.dll")
         file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100.dll" "deps/opencv/x64/vc16/bin/opencv_videoio_ffmpeg4100_64.dll")
     endif()
     file(GLOB TORCH_DLLS       "deps/libtorch/lib/*.dll")
     file(GLOB ONNXRUNTIME_DLLS "deps/onnxruntime/lib/*.dll")
 
-    set(FFMPEG_LIBS      "deps/onnxruntime/lib/onnxruntime.lib")
-    set(ONNXRUNTIME_LIBS "deps/onnxruntime/lib/onnxruntime.lib")
+    file(GLOB ONNXRUNTIME_LIBS "deps/onnxruntime/lib/onnxruntime.lib")
+
+    include_directories(deps/ffmpeg/include deps/onnxruntime/include)
 endif()
 
 find_package(Torch  REQUIRED)
+find_package(FFMPEG REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
-
-include_directories(include deps/onnxruntime/include())
 
 add_subdirectory(cv)
 add_subdirectory(nlp)
