@@ -1,9 +1,8 @@
-
-#include "./rnnoise/rnnoise.h"
+#include "./guiguzi/rnnoise.h"
 
 #define FRAME_SIZE 480
 
-int main(int argc, char **argv) {
+int main(int argc, char const *argv[]) {
   int i;
   int first = 1;
   float x[FRAME_SIZE];
