@@ -93,6 +93,8 @@ if(CMAKE_HOST_UNIX)
     )
 
     find_package(onnxruntime REQUIRED)
+
+    link_directories(deps/ffmpeg/lib)
 endif()
 
 if(CMAKE_HOST_WIN32)
@@ -116,10 +118,11 @@ if(CMAKE_HOST_WIN32)
     file(GLOB ONNXRUNTIME_DLLS "deps/onnxruntime/lib/*.dll")
 
     file(GLOB ONNXRUNTIME_LIBS "deps/onnxruntime/lib/onnxruntime.lib")
+
+    find_package(FFMPEG REQUIRED)
 endif()
 
 find_package(Torch  REQUIRED)
-find_package(FFMPEG REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
 
