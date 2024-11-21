@@ -4,6 +4,8 @@
 
 #include "rnnoise.h"
 
+// #define FF_API_OLD_CHANNEL_LAYOUT true
+
 extern "C" {
 
 #include "libavcodec/avcodec.h"

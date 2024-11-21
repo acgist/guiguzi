@@ -19,10 +19,10 @@ else()
     target_link_libraries(
         ${PROJECT_NAME}
         fmt
-        onnx
         spdlog
         ${OpenCV_LIBS}
         ${TORCH_LIBRARIES}
+        onnxruntime::onnxruntime
     )
 endif()
 

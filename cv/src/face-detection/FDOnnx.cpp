@@ -224,7 +224,7 @@ static void createSession() {
     const wchar_t* modelPath = L"D:/tmp/face/yolov5su.onnx";
     // const wchar_t* modelPath = L"D:/tmp/face/yolo11n.onnx";
     #else
-    const char_t* modelPath = "D:/tmp/face/yolov5su.onnx";
+    const char* modelPath = "D:/tmp/face/yolov5su.onnx";
     #endif
     session = new Ort::Session(*env, modelPath, sessionOption);
     Ort::AllocatorWithDefaultOptions allocator;

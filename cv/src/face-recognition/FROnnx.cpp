@@ -179,8 +179,8 @@ static std::vector<float> preProcess(cv::Mat& source, cv::Mat& target) {
                 p.y = (p.y - rect.y - pos) / scale;
             }
         }
-        cv::Rect rect((face.cols - min) / 2, (face.rows - min) / 2, min, min);
-        face = face(rect);
+        cv::Rect faceRect((face.cols - min) / 2, (face.rows - min) / 2, min, min);
+        face = face(faceRect);
         // cv::cvtColor(input, input, cv::COLOR_BGR2RGB);
         // cv::resize(input, input, cv::Size(112, 112));
         cv::resize(face, face, cv::Size(112, 112));

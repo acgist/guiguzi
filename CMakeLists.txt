@@ -79,16 +79,26 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
 set(
     CMAKE_PREFIX_PATH
     ${CMAKE_PREFIX_PATH}
+    deps/ffmpeg
     deps/libtorch
 )
 
-include_directories(include deps/onnxruntime/include)
+include_directories(include deps/ffmpeg/include deps/onnxruntime/include)
+
+if(CMAKE_HOST_UNIX)
+    set(
+        CMAKE_PREFIX_PATH
+        ${CMAKE_PREFIX_PATH}
+        deps/onnxruntime
+    )
+
+    find_package(onnxruntime REQUIRED)
+endif()
 
 if(CMAKE_HOST_WIN32)
     set(
         CMAKE_PREFIX_PATH
         ${CMAKE_PREFIX_PATH}
-        deps/ffmpeg
         deps/opencv
         deps/spdlog
     )
@@ -106,8 +116,6 @@ if(CMAKE_HOST_WIN32)
     file(GLOB ONNXRUNTIME_DLLS "deps/onnxruntime/lib/*.dll")
 
     file(GLOB ONNXRUNTIME_LIBS "deps/onnxruntime/lib/onnxruntime.lib")
-
-    include_directories(deps/ffmpeg/include)
 endif()
 
 find_package(Torch  REQUIRED)
