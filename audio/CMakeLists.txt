@@ -20,5 +20,6 @@ else()
         avutil
         avcodec
         avformat
+        swresample
     )
 endif()

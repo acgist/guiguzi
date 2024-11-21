@@ -95,6 +95,17 @@ if(CMAKE_HOST_UNIX)
     find_package(onnxruntime REQUIRED)
 
     link_directories(deps/ffmpeg/lib)
+
+    # add_library(
+    #     avformat
+    #     SHARED
+    #     IMPORTED
+    # )
+    # set_target_properties(
+    #     avformat
+    #     PROPERTIES IMPORTED_LOCATION
+    #     deps/ffmpeg/lib/libavformat.so
+    # )
 endif()
 
 if(CMAKE_HOST_WIN32)

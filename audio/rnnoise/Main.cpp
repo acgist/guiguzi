@@ -25,7 +25,7 @@ extern "C" {
     data.resize(480);
     // std::vector<char> data;
     // data.resize(960);
-    guiguzi::Rnnoise rnnoise;
+    guiguzi::Rnnoise rnnoise(48000, 2, 16, "mp3");;
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
         return;
@@ -59,10 +59,15 @@ extern "C" {
         std::cout << "加载rnnoise失败\n";
         return;
     }
+    std::vector<char> out;
     while(av_read_frame(formatCtx, packet) >= 0) {
         size_t size = packet->size;
-        bool ret = rnnoise.superSweet(packet->data, size);
-        output.write(reinterpret_cast<char*>(packet->data), size);
+        bool ret = rnnoise.superSweet(packet->data, size, out);
+        // output.write(reinterpret_cast<char*>(packet->data), size);
+        if(!out.empty()) {
+            output.write(out.data(), out.size());
+            out.clear();
+        }
         av_packet_unref(packet);
     }
     output.close();

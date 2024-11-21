@@ -142,13 +142,35 @@ constexpr static int timeDuration = 1000 / 25;
     capture.release();
 }
 
+[[maybe_unused]] static void testTrackbar() {
+    cv::namedWindow("test");
+    cv::resizeWindow("test", 1280, 640);
+    int r = 0;
+    int g = 0;
+    int b = 0;
+    cv::createTrackbar("r", "test", &r, 255);
+    cv::createTrackbar("g", "test", &g, 255);
+    cv::createTrackbar("b", "test", &b, 255);
+    cv::Mat image(128, 128, CV_8UC3);
+    while(true) {
+        image.setTo(cv::Scalar( b, g, r ));
+        cv::imshow("test", image);
+        int key = cv::waitKey(50);
+        if(key == 'q') {
+            break;
+        }
+    }
+    cv::destroyAllWindows();
+}
+
 int main() {
     guiguzi::logger::init();
     // createWindow();
     // testBlobFromImage();
     // testCamera();
     // testFile();
-    testFileWrite();
+    // testFileWrite();
+    testTrackbar();
     cv::waitKey(0);
     // while(true) {
     //     auto key = cv::waitKey(0);
