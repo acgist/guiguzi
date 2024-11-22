@@ -45,8 +45,8 @@ extern "C" {
 [[maybe_unused]] static void testFFmpeg() {
     AVPacket       * packet    = av_packet_alloc();
     AVFormatContext* formatCtx = avformat_alloc_context();
-    // if(avformat_open_input(&formatCtx, "D:/tmp/audio.mp3", NULL, NULL) < 0) {
-    if(avformat_open_input(&formatCtx, "D:/tmp/audio.mono.mp3", NULL, NULL) < 0) {
+    if(avformat_open_input(&formatCtx, "D:/tmp/audio.mp3", NULL, NULL) < 0) {
+    // if(avformat_open_input(&formatCtx, "D:/tmp/audio.mono.mp3", NULL, NULL) < 0) {
         std::cout << "打开音频输入文件失败\n";
         return;
     }
@@ -56,8 +56,8 @@ extern "C" {
         std::cout << "打开音频输出文件失败\n";
         return;
     }
-    // guiguzi::Rnnoise rnnoise(48000, 2, "mp3");
-    guiguzi::Rnnoise rnnoise(48000, 1, "mp3");
+    guiguzi::Rnnoise rnnoise(48000, 2, "mp3");
+    // guiguzi::Rnnoise rnnoise(48000, 1, "mp3");
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
         return;
@@ -83,9 +83,9 @@ int main() {
     // testPCM();
     int i = 0;
     auto a = std::chrono::system_clock::now();
-    while(++i < 1000) { // 测试内存泄漏
+    // while(++i < 1000) { // 测试内存泄漏
         testFFmpeg();
-    }
+    // }
     auto z = std::chrono::system_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(z - a).count() << '\n';
     return 0;

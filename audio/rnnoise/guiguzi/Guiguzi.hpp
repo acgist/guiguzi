@@ -50,6 +50,7 @@ private:
     size_t ar;          // 输出采样率
     size_t ac;          // 输出通道数
     int swr_ac;         // 重采样通道数
+    int enc_nb_samples; // 编码帧数
     AVFrame        * frame  { nullptr }; // 数据帧
     AVPacket       * packet { nullptr }; // 数据包
     const AVCodec  * decoder{ nullptr }; // 解码器
