@@ -13,7 +13,8 @@ add_library(
     src/kiss_fft.c
     src/celt_lpc.c
     src/nnet_default.c
-    src/rnnoise_data.c
+    # src/rnnoise_data.c
+    src/rnnoise_data_little.c
     src/rnnoise_tables.c
     src/parse_lpcnet_weights.c
 )

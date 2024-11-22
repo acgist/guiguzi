@@ -148,20 +148,20 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
 int main() {
     guiguzi::logger::init();
     createSession();
-    auto input = cv::imread("D:/tmp/helmet/train/1.jpg");
+    // auto input = cv::imread("D:/tmp/helmet/train/1.jpg");
     // auto input = cv::imread("D:/tmp/helmet/val/34.jpg");
-    run(input);
-    cv::namedWindow("input", cv::WINDOW_NORMAL);
-    cv::imshow("input", input);
-    // cv::VideoCapture capture(0);
-    // capture.isOpened();
-    // cv::Mat frame;
-    // while(true) {
-    //     capture >> frame;
-    //     run(frame);
-    //     cv::imshow("input", frame);
-    //     cv::waitKey(10);
-    // }
+    // run(input);
+    // cv::namedWindow("input", cv::WINDOW_NORMAL);
+    // cv::imshow("input", input);
+    cv::VideoCapture capture(0);
+    capture.isOpened();
+    cv::Mat frame;
+    while(true) {
+        capture >> frame;
+        run(frame);
+        cv::imshow("input", frame);
+        cv::waitKey(10);
+    }
     cv::waitKey(0);
     guiguzi::logger::shutdown();
     return 0;
