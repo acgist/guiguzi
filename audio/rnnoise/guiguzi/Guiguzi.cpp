@@ -195,6 +195,7 @@ bool guiguzi::Rnnoise::superSweet(uint8_t* input, const size_t& size, std::vecto
     this->packet->size = size;
     // 解码音频
     if(avcodec_send_packet(this->decodeCodecCtx, this->packet) != 0) {
+        std::cout << "解码失败\n";
         // av_packet_unref(this->packet); // 不用解除
         return false;
     }
@@ -242,6 +243,7 @@ bool guiguzi::Rnnoise::superSweet(uint8_t* input, const size_t& size, std::vecto
     this->buffer_swr.erase(this->buffer_swr.begin(), this->buffer_swr.begin() + pos);
     // 编码音频
     if(avcodec_send_frame(this->encodeCodecCtx, this->frame) != 0) {
+        std::cout << "编码失败\n";
         av_frame_unref(this->frame);
         return false;
     }
