@@ -7,6 +7,7 @@
 
 extern "C" {
 
+#include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 
 }
@@ -18,10 +19,12 @@ extern "C" {
     output.open("D:/tmp/audio.rnnoise.pcm", std::ios::trunc | std::ios_base::binary);
     if(!input.is_open()) {
         std::cout << "打开音频输入文件失败\n";
+        input.close();
         return;
     }
     if(!output.is_open()) {
         std::cout << "打开音频输出文件失败\n";
+        output.close();
         return;
     }
     std::vector<short> data;
@@ -31,6 +34,9 @@ extern "C" {
     guiguzi::Rnnoise rnnoise;
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
+        input.close();
+        output.close();
+        rnnoise.release();
         return;
     }
     while(input.read(reinterpret_cast<char*>(data.data()), 960)) {
@@ -43,49 +49,92 @@ extern "C" {
 }
 
 [[maybe_unused]] static void testFFmpeg() {
-    AVPacket       * packet    = av_packet_alloc();
-    AVFormatContext* formatCtx = avformat_alloc_context();
-    #if _WIN32
-    if(avformat_open_input(&formatCtx, "D:/tmp/audio.mp3", NULL, NULL) < 0) {
-    // if(avformat_open_input(&formatCtx, "D:/tmp/audio.mono.mp3", NULL, NULL) < 0) {
-    #else
-    if(avformat_open_input(&formatCtx, "/data/guiguzi/audio.mp3", NULL, NULL) < 0) {
-    // if(avformat_open_input(&formatCtx, "/data/guiguzi/audio.mono.mp3", NULL, NULL) < 0) {
-    #endif
-        std::cout << "打开音频输入文件失败\n";
-        return;
-    }
-    std::ofstream output;
-    #if _WIN32
-    output.open("D:/tmp/audio.rnnoise.mp3", std::ios::trunc | std::ios_base::binary);
-    #else
-    output.open("/data/guiguzi/audio.rnnoise.mp3", std::ios::trunc | std::ios_base::binary);
-    #endif
-    if(!output.is_open()) {
-        std::cout << "打开音频输出文件失败\n";
-        return;
-    }
     guiguzi::Rnnoise rnnoise(48000, 2, "mp3");
     // guiguzi::Rnnoise rnnoise(48000, 1, "mp3");
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
+        rnnoise.release();
         return;
     }
+    AVPacket       * packet    = av_packet_alloc();
+    AVFormatContext* inputCtx  = avformat_alloc_context();
+    AVFormatContext* outputCtx = avformat_alloc_context();
+    #if _WIN32
+    const char* input_file  = "D:/tmp/audio.mp3";
+    const char* output_file = "D:/tmp/audio.mp3";
+    #else
+    const char* input_file  = "/data/guiguzi/audio.mp3";
+    const char* output_file = "/data/guiguzi/audio.rnnoise.mp3";
+    #endif
+    if(avformat_open_input(&inputCtx, input_file, NULL, NULL) != 0) {
+        std::cout << "打开音频输入文件失败\n";
+        rnnoise.release();
+        av_packet_free(&packet);
+        avformat_close_input(&inputCtx);
+        avformat_close_input(&outputCtx);
+        return;
+    }
+    if(avformat_alloc_output_context2(&outputCtx, NULL, NULL, input_file) != 0) {
+        std::cout << "打开音频输出文件失败\n";
+        rnnoise.release();
+        av_packet_free(&packet);
+        avformat_close_input(&inputCtx);
+        avformat_close_input(&outputCtx);
+        return;
+    }
+    AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_MP3));
+    if(!stream) {
+        std::cout << "打开音频流失败\n";
+        rnnoise.release();
+        av_packet_free(&packet);
+        avformat_close_input(&inputCtx);
+        avformat_close_input(&outputCtx);
+        return;
+    }
+    if(avcodec_parameters_from_context(stream->codecpar, rnnoise.encodeCodecCtx) != 0) {
+        std::cout << "拷贝音频配置失败\n";
+        rnnoise.release();
+        av_packet_free(&packet);
+        avformat_close_input(&inputCtx);
+        avformat_close_input(&outputCtx);
+        return;
+    }
+    if(avio_open(&outputCtx->pb, "D:/tmp/audio.rnnoise.mp3", AVIO_FLAG_WRITE) != 0) {
+        std::cout << "打开音频输出文件失败\n";
+        rnnoise.release();
+        av_packet_free(&packet);
+        avformat_close_input(&inputCtx);
+        avformat_close_input(&outputCtx);
+        return;
+    }
+    avformat_write_header(outputCtx, NULL);
     std::vector<char> out;
-    while(av_read_frame(formatCtx, packet) == 0) {
+    std::vector<int64_t> pts;
+    while(av_read_frame(inputCtx, packet) == 0) {
+        pts.push_back(packet->pts);
         rnnoise.superSweet(packet->data, packet->size, out);
+        av_packet_unref(packet);
         if(!out.empty()) {
-            output.write(out.data(), out.size());
+            packet->pts = pts[0];
+            packet->data = reinterpret_cast<uint8_t*>(out.data());
+            packet->size = out.size();
+            packet->stream_index = stream->index;
+            pts.pop_back();
+            av_write_frame(outputCtx, packet);
+            av_packet_unref(packet);
             out.clear();
         }
-        av_packet_unref(packet);
     }
     av_packet_unref(packet);
-    output.close();
+    av_write_trailer(outputCtx);
     rnnoise.release();
     av_packet_free(&packet);
-    avformat_close_input(&formatCtx);
-    avformat_free_context(formatCtx);
+    // avio_close(inputCtx->pb);
+    // avformat_free_context(inputCtx);
+    avformat_close_input(&inputCtx);
+    // avio_close(outputCtx->pb);
+    // avformat_free_context(outputCtx);
+    avformat_close_input(&outputCtx);
 }
 
 int main() {

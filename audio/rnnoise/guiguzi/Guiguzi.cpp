@@ -36,7 +36,7 @@ static AVChannelLayout getChLayout(int ac) {
     return AV_CHANNEL_LAYOUT_STEREO;
 }
 
-static const int FRAME = 480; // 降噪处理采样数量
+static const int RNNOISE_FRAME = 480; // 降噪处理采样数量
 
 guiguzi::Rnnoise::Rnnoise(size_t ar, size_t ac, std::string format) : ar(ar), ac(ac), format(format) {
 }
@@ -51,7 +51,7 @@ bool guiguzi::Rnnoise::init() {
     }
     this->inited = true;
     this->denoise = rnnoise_create(NULL);
-    this->buffer_denoise = new float[FRAME];
+    this->buffer_denoise = new float[RNNOISE_FRAME];
     if("pcm" == format) {
         return true;
     }
@@ -63,9 +63,9 @@ bool guiguzi::Rnnoise::init() {
     } else if("mp3" == format) {
         codecId = AV_CODEC_ID_MP3;
         #if __linux__
-        AVSampleFormat sampleFormat = AV_SAMPLE_FMT_S16P;
+        sampleFormat = AV_SAMPLE_FMT_S16P;
         #endif
-        this->enc_nb_samples = 1152;
+        this->encoder_nb_samples = 1152;
     } else if("pcma" == format) {
         // PCMA (G.711 a-law)
         codecId = AV_CODEC_ID_PCM_ALAW;
@@ -74,7 +74,7 @@ bool guiguzi::Rnnoise::init() {
         codecId = AV_CODEC_ID_PCM_MULAW;
     } else if("opus" == format) {
         codecId = AV_CODEC_ID_OPUS;
-        this->enc_nb_samples = 960;
+        this->encoder_nb_samples = 960;
     } else {
         std::cout << "不支持的编码格式：" << format << '\n';
         return false;
@@ -180,11 +180,17 @@ void guiguzi::Rnnoise::sweet(char* input) {
 }
 
 void guiguzi::Rnnoise::sweet(short* input) {
-    std::copy_n(input, FRAME, this->buffer_denoise);
-    // std::copy(input, input + FRAME, this->buffer_denoise);
+    // for(int i = 0 ; i < RNNOISE_FRAME; ++i) {
+    //     this->buffer_denoise[i] = input[i];
+    // }
+    // std::copy_n(input, RNNOISE_FRAME, this->buffer_denoise);
+    std::copy(input, input + RNNOISE_FRAME, this->buffer_denoise);
     this->sweet(this->buffer_denoise);
-    std::copy_n(this->buffer_denoise, FRAME, input);
-    // std::copy(this->buffer_denoise, this->buffer_denoise + FRAME, input);
+    // for(int i = 0 ; i < RNNOISE_FRAME; ++i) {
+    //     input[i] = this->buffer_denoise[i];
+    // }
+    // std::copy_n(this->buffer_denoise, RNNOISE_FRAME, input);
+    std::copy(this->buffer_denoise, this->buffer_denoise + RNNOISE_FRAME, input);
 }
 
 void guiguzi::Rnnoise::sweet(uint8_t* input) {
@@ -200,13 +206,11 @@ bool guiguzi::Rnnoise::superSweet(uint8_t* input, const size_t& size, std::vecto
     this->packet->size = size;
     // 解码音频
     if(avcodec_send_packet(this->decodeCodecCtx, this->packet) != 0) {
-        std::cout << "解码失败\n";
         // av_packet_unref(this->packet); // 不用解除
         return false;
     }
     // av_packet_unref(this->packet); // 不用解除
     // 重采样 + 降噪
-    int nb_samples = 0; // 当前降噪偏移 = PCM累计采样数量 = 次数 * 960 byte = 次数 * 480 short
     const int remaining_size = this->buffer_swr.size(); // 记录旧的没有降噪剩余数据
     while(avcodec_receive_frame(this->decodeCodecCtx, this->frame) == 0) {
         const int out_buffer_size = av_samples_get_buffer_size(NULL, this->swr_ac, this->frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
@@ -215,38 +219,41 @@ bool guiguzi::Rnnoise::superSweet(uint8_t* input, const size_t& size, std::vecto
         // 重采样: 不用判断S16 S16P FLTP
         const int swr_size = swr_convert(this->swrCtx, &buffer, this->frame->nb_samples, const_cast<const uint8_t**>(this->frame->data), this->frame->nb_samples);
         this->buffer_swr.resize(remaining_size + swr_size); // 删除多余数据
-        while(this->buffer_swr.size() > nb_samples + FRAME) {
+        while(this->buffer_swr.size() > this->rnnoise_nb_samples + RNNOISE_FRAME) {
             // 降噪
-            this->sweet(this->buffer_swr.data() + nb_samples);
-            nb_samples += FRAME;
+            this->sweet(this->buffer_swr.data() + this->rnnoise_nb_samples);
+            this->rnnoise_nb_samples += RNNOISE_FRAME;
         }
         av_frame_unref(this->frame);
     }
     av_frame_unref(this->frame);
     // 没有降噪直接返回
-    if(nb_samples <= 0) {
+    if(this->rnnoise_nb_samples <= 0) {
         return true;
     }
     int frame_pos   = 0;
     int frame_index = 0;
     // 不同编码格式帧的采样数量不同
-    while(frame_pos + this->enc_nb_samples <= this->buffer_swr.size()) {
+    while(frame_pos + this->encoder_nb_samples <= this->rnnoise_nb_samples) {
         this->frame->format      = AV_SAMPLE_FMT_S16;
         this->frame->ch_layout   = getChLayout(this->ac);
         // this->frame->nb_samples  = nb_samples;
-        this->frame->nb_samples  = this->enc_nb_samples;
+        this->frame->nb_samples  = this->encoder_nb_samples;
         this->frame->sample_rate = 48000;
         // 重新分配大小
-        av_frame_get_buffer(this->frame, 0);
+        if(av_frame_get_buffer(this->frame, 0) != 0) {
+            av_frame_unref(this->frame);
+            return false;
+        }
         // 复制降噪数据给编码帧
         if(this->ac == 1) {
             // std::memcpy(this->frame->buf[0]->data, this->buffer_swr.data(), nb_samples * 2);
-            std::memcpy(this->frame->buf[0]->data, this->buffer_swr.data() + frame_pos, this->enc_nb_samples * 2);
+            std::memcpy(this->frame->buf[0]->data, this->buffer_swr.data() + frame_pos, this->encoder_nb_samples * 2);
         } else {
             short* frame_data = reinterpret_cast<short*>(this->frame->buf[0]->data);
             // 不用重采样直接复制：不存在两个通道数据不一致的情况
             // for(int i = 0; i < nb_samples; ++i) {
-            for(int i = 0; i < this->enc_nb_samples; ++i) {
+            for(int i = 0; i < this->encoder_nb_samples; ++i) {
                 // frame_data[2 * i]     = this->buffer_swr[i]; // L
                 // frame_data[2 * i + 1] = this->buffer_swr[i]; // R
                 frame_data[2 * i]     = this->buffer_swr[frame_pos + i]; // L
@@ -255,21 +262,21 @@ bool guiguzi::Rnnoise::superSweet(uint8_t* input, const size_t& size, std::vecto
         }
         // 编码音频
         if(avcodec_send_frame(this->encodeCodecCtx, this->frame) != 0) {
-            std::cout << "编码失败\n";
             av_frame_unref(this->frame);
             return false;
         }
         av_frame_unref(this->frame);
         ++frame_index;
-        frame_pos = frame_index * this->enc_nb_samples;
+        frame_pos = frame_index * this->encoder_nb_samples;
     }
     // 删除已经降噪数据
     // this->buffer_swr.erase(this->buffer_swr.begin(), this->buffer_swr.begin() + nb_samples);
     this->buffer_swr.erase(this->buffer_swr.begin(), this->buffer_swr.begin() + frame_pos);
+    this->rnnoise_nb_samples -= frame_pos;
     while(avcodec_receive_packet(this->encodeCodecCtx, this->packet) == 0) {
-        const int old_size = out.size();
-        out.resize(old_size + this->packet->size);
-        std::memcpy(out.data() + old_size, this->packet->data, this->packet->size);
+        // 如果多包需要处理
+        out.resize(this->packet->size);
+        std::memcpy(out.data(), this->packet->data, this->packet->size);
         av_packet_unref(this->packet);
     }
     av_packet_unref(this->packet);

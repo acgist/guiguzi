@@ -41,7 +41,7 @@ namespace guiguzi {
 
 class Rnnoise {
 
-private:
+public:
     bool inited{ false }; // 是否加载
     DenoiseState* denoise{ nullptr }; // 降噪对象
     float       * buffer_denoise{ nullptr }; // 降噪缓存
@@ -50,7 +50,8 @@ private:
     size_t ar;          // 输出采样率
     size_t ac;          // 输出通道数
     int swr_ac;         // 重采样通道数
-    int enc_nb_samples; // 编码帧数
+    int encoder_nb_samples{ 960 }; // 编码帧数
+    int rnnoise_nb_samples{ 0   }; // 降噪帧数偏移
     AVFrame        * frame  { nullptr }; // 数据帧
     AVPacket       * packet { nullptr }; // 数据包
     const AVCodec  * decoder{ nullptr }; // 解码器
