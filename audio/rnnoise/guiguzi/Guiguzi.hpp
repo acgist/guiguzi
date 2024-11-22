@@ -43,9 +43,9 @@ class Rnnoise {
 
 public:
     bool inited{ false }; // 是否加载
-    DenoiseState* denoise{ nullptr }; // 降噪对象
+    DenoiseState* denoise{ nullptr };        // 降噪对象
     float       * buffer_denoise{ nullptr }; // 降噪缓存
-    std::vector<short> buffer_swr; // 重采样缓存（降噪使用）: 480次采样才降噪一次
+    std::vector<short> buffer_swr;           // 重采样缓存（降噪使用）: 480次采样才降噪一次
     std::string format; // 输入输出格式
     size_t ar;          // 输出采样率
     size_t ac;          // 输出通道数
@@ -61,13 +61,18 @@ public:
     AVCodecContext * encodeCodecCtx{ nullptr }; // 编码器上下文
 
 public:
-    bool init(); // 加载资源
+    bool init();    // 加载资源
+    void release(); // 释放资源
     void sweet(char   * input); // 降噪
     void sweet(short  * input); // 降噪
     void sweet(float  * input); // 降噪
     void sweet(uint8_t* input); // 降噪
-    bool superSweet(uint8_t* input, const size_t& size, std::vector<char>& out); // 封装格式降噪
-    void release(); // 释放资源
+    bool putSweet(uint8_t* input, const size_t& size); // 封装格式降噪
+    bool getSweet(std::vector<char>& out);             // 读取封装数据
+
+private:
+    bool swrDecode(uint8_t* input, const size_t& size); // 解码重采样
+    bool swrEncode();                                   // 编码重采样
 
 public:
     Rnnoise(size_t ar = 48000, size_t ac = 1, std::string format = "pcm");

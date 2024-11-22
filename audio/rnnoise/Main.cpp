@@ -49,6 +49,7 @@ extern "C" {
 }
 
 [[maybe_unused]] static void testFFmpeg() {
+    // guiguzi::Rnnoise rnnoise(48000, 1, "mp3");
     guiguzi::Rnnoise rnnoise(48000, 2, "mp3");
     // guiguzi::Rnnoise rnnoise(48000, 2, "opus");
     if(!rnnoise.init()) {
@@ -61,6 +62,7 @@ extern "C" {
     AVFormatContext* outputCtx = avformat_alloc_context();
     #if _WIN32
     const char* input_file  = "D:/tmp/audio.mp3";
+    // const char* input_file  = "D:/tmp/audio.mono.mp3";
     const char* output_file = "D:/tmp/audio.rnnoise.mp3";
     #else
     const char* input_file  = "/data/guiguzi/audio.mp3";
@@ -115,9 +117,9 @@ extern "C" {
     while(av_read_frame(inputCtx, packet) == 0) {
         dts.push_back(packet->dts);
         pts.push_back(packet->pts);
-        rnnoise.superSweet(packet->data, packet->size, out);
+        rnnoise.putSweet(packet->data, packet->size);
         av_packet_unref(packet);
-        if(!out.empty()) {
+        while(rnnoise.getSweet(out)) {
             packet->dts = dts[0];
             packet->pts = pts[0];
             packet->data = reinterpret_cast<uint8_t*>(out.data());
