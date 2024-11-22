@@ -45,13 +45,22 @@ extern "C" {
 [[maybe_unused]] static void testFFmpeg() {
     AVPacket       * packet    = av_packet_alloc();
     AVFormatContext* formatCtx = avformat_alloc_context();
+    #if _WIN32
     if(avformat_open_input(&formatCtx, "D:/tmp/audio.mp3", NULL, NULL) < 0) {
     // if(avformat_open_input(&formatCtx, "D:/tmp/audio.mono.mp3", NULL, NULL) < 0) {
+    #else
+    if(avformat_open_input(&formatCtx, "/data/guiguzi/audio.mp3", NULL, NULL) < 0) {
+    // if(avformat_open_input(&formatCtx, "/data/guiguzi/audio.mono.mp3", NULL, NULL) < 0) {
+    #endif
         std::cout << "打开音频输入文件失败\n";
         return;
     }
     std::ofstream output;
+    #if _WIN32
     output.open("D:/tmp/audio.rnnoise.mp3", std::ios::trunc | std::ios_base::binary);
+    #else
+    output.open("/data/guiguzi/audio.rnnoise.mp3", std::ios::trunc | std::ios_base::binary);
+    #endif
     if(!output.is_open()) {
         std::cout << "打开音频输出文件失败\n";
         return;
