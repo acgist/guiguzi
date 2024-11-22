@@ -49,7 +49,7 @@ extern "C" {
 }
 
 [[maybe_unused]] static void testFFmpeg() {
-    guiguzi::Rnnoise rnnoise(48000, 2, "mp3");
+    guiguzi::Rnnoise rnnoise(48000, 2, "opus");
     // guiguzi::Rnnoise rnnoise(48000, 1, "mp3");
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
@@ -60,8 +60,8 @@ extern "C" {
     AVFormatContext* inputCtx  = avformat_alloc_context();
     AVFormatContext* outputCtx = avformat_alloc_context();
     #if _WIN32
-    const char* input_file  = "D:/tmp/audio.mp3";
-    const char* output_file = "D:/tmp/audio.mp3";
+    const char* input_file  = "D:/tmp/audio.opus";
+    const char* output_file = "D:/tmp/audio.rnnoise.opus";
     #else
     const char* input_file  = "/data/guiguzi/audio.mp3";
     const char* output_file = "/data/guiguzi/audio.rnnoise.mp3";
@@ -82,6 +82,7 @@ extern "C" {
         avformat_close_input(&outputCtx);
         return;
     }
+    // AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_OPUS));
     AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_MP3));
     if(!stream) {
         std::cout << "打开音频流失败\n";
@@ -99,7 +100,7 @@ extern "C" {
         avformat_close_input(&outputCtx);
         return;
     }
-    if(avio_open(&outputCtx->pb, "D:/tmp/audio.rnnoise.mp3", AVIO_FLAG_WRITE) != 0) {
+    if(avio_open(&outputCtx->pb, output_file, AVIO_FLAG_WRITE) != 0) {
         std::cout << "打开音频输出文件失败\n";
         rnnoise.release();
         av_packet_free(&packet);
@@ -109,16 +110,20 @@ extern "C" {
     }
     avformat_write_header(outputCtx, NULL);
     std::vector<char> out;
+    std::vector<int64_t> dts;
     std::vector<int64_t> pts;
     while(av_read_frame(inputCtx, packet) == 0) {
+        dts.push_back(packet->dts);
         pts.push_back(packet->pts);
         rnnoise.superSweet(packet->data, packet->size, out);
         av_packet_unref(packet);
         if(!out.empty()) {
+            packet->dts = dts[0];
             packet->pts = pts[0];
             packet->data = reinterpret_cast<uint8_t*>(out.data());
             packet->size = out.size();
             packet->stream_index = stream->index;
+            dts.pop_back();
             pts.pop_back();
             av_write_frame(outputCtx, packet);
             av_packet_unref(packet);
