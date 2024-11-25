@@ -74,7 +74,8 @@ bool guiguzi::Rnnoise::init() {
         codecId = AV_CODEC_ID_PCM_MULAW;
     } else if("opus" == format) {
         codecId = AV_CODEC_ID_OPUS;
-        this->encoder_nb_samples = 960;
+        sampleFormat = AV_SAMPLE_FMT_FLTP;
+        this->encoder_nb_samples = 120;
     } else {
         std::cout << "不支持的编码格式：" << format << '\n';
         return false;
@@ -113,6 +114,7 @@ bool guiguzi::Rnnoise::init() {
     this->encodeCodecCtx->sample_fmt  = sampleFormat;
     this->encodeCodecCtx->sample_rate = this->ar;
     this->encodeCodecCtx->ch_layout   = getChLayout(this->ac);
+    this->encodeCodecCtx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
     if(avcodec_open2(this->encodeCodecCtx, this->encoder, nullptr) != 0) {
         std::cout << "打开编码器上下文失败：" << format << '\n';
         return false;
@@ -218,11 +220,17 @@ bool guiguzi::Rnnoise::swrDecode(uint8_t* input, const size_t& size) {
         const int out_buffer_size = av_samples_get_buffer_size(NULL, this->swr_ac, this->frame->nb_samples, AV_SAMPLE_FMT_S16, 0);
         this->buffer_swr.resize(remaining_size + out_buffer_size);
         uint8_t* buffer = reinterpret_cast<uint8_t*>(this->buffer_swr.data() + remaining_size);
-        const int swr_size = swr_convert(this->swrCtx, &buffer, this->frame->nb_samples, const_cast<const uint8_t**>(this->frame->data), this->frame->nb_samples);
+        const int swr_size = swr_convert(
+            this->swrCtx,
+            &buffer,
+            this->frame->nb_samples,
+            const_cast<const uint8_t**>(this->frame->data),
+            this->frame->nb_samples
+        );
         this->buffer_swr.resize(remaining_size + swr_size); // 删除多余数据
         while(this->buffer_swr.size() > this->rnnoise_nb_samples + RNNOISE_FRAME) {
             // 降噪
-            this->sweet(this->buffer_swr.data() + this->rnnoise_nb_samples);
+            // this->sweet(this->buffer_swr.data() + this->rnnoise_nb_samples);
             this->rnnoise_nb_samples += RNNOISE_FRAME;
         }
         av_frame_unref(this->frame);
@@ -236,11 +244,11 @@ bool guiguzi::Rnnoise::swrEncode() {
     int frame_nb_samples_pos = 0; // 编码帧偏移 = 样本数量
     // 不同编码格式帧的采样数量不同
     while(frame_nb_samples_pos + this->encoder_nb_samples <= this->rnnoise_nb_samples) {
-        this->frame->format      = AV_SAMPLE_FMT_S16;
+        this->frame->format      = this->encodeCodecCtx->sample_fmt;
         this->frame->ch_layout   = getChLayout(this->ac);
         // this->frame->nb_samples  = nb_samples;
         this->frame->nb_samples  = this->encoder_nb_samples;
-        this->frame->sample_rate = 48000;
+        this->frame->sample_rate = this->ar;
         // 重新分配大小
         if(av_frame_get_buffer(this->frame, 0) != 0) {
             av_frame_unref(this->frame);

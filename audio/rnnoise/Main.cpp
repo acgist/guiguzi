@@ -49,7 +49,6 @@ extern "C" {
 }
 
 [[maybe_unused]] static void testFFmpeg() {
-    // guiguzi::Rnnoise rnnoise(48000, 1, "mp3");
     guiguzi::Rnnoise rnnoise(48000, 2, "mp3");
     // guiguzi::Rnnoise rnnoise(48000, 2, "opus");
     if(!rnnoise.init()) {
@@ -62,8 +61,9 @@ extern "C" {
     AVFormatContext* outputCtx = avformat_alloc_context();
     #if _WIN32
     const char* input_file  = "D:/tmp/audio.mp3";
-    // const char* input_file  = "D:/tmp/audio.mono.mp3";
     const char* output_file = "D:/tmp/audio.rnnoise.mp3";
+    // const char* input_file  = "D:/tmp/audio.opus";
+    // const char* output_file = "D:/tmp/audio.rnnoise.opus";
     #else
     const char* input_file  = "/data/guiguzi/audio.mp3";
     const char* output_file = "/data/guiguzi/audio.rnnoise.mp3";
@@ -84,8 +84,8 @@ extern "C" {
         avformat_close_input(&outputCtx);
         return;
     }
-    AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_MP3));
-    // AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_OPUS));
+    // AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_MP3));
+    AVStream* stream = avformat_new_stream(outputCtx, avcodec_find_encoder(AV_CODEC_ID_OPUS));
     if(!stream) {
         std::cout << "打开音频流失败\n";
         rnnoise.release();
