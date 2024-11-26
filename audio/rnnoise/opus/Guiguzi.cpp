@@ -121,18 +121,17 @@ bool guiguzi::Rnnoise::getSweet(std::vector<char>& out) {
         return false;
     }
     #ifdef __PCM__
-    out.resize(this->per_size);
-    std::memcpy(out.data(), this->buffer_rnnoise.data(), this->per_size);
-    this->buffer_rnnoise.clear();
-    this->rnnoise_pos = 0;
+    const int size = this->rnnoise_pos * sizeof(short);
+    out.resize(size);
+    std::memcpy(out.data(), this->buffer_rnnoise.data(), size);
     #else
     out.resize(this->per_size);
-    const int size = opus_encode(this->encoder, this->buffer_rnnoise.data(), this->per_sample, reinterpret_cast<unsigned char*>(out.data()), this->per_size);
+    const int size = opus_encode(this->encoder, this->buffer_rnnoise.data(), this->per_sample * this->ac, reinterpret_cast<unsigned char*>(out.data()), this->per_size);
     out.resize(size);
+    #endif
     if(size > 0) {
         this->buffer_rnnoise.erase(this->buffer_rnnoise.begin(), this->buffer_rnnoise.begin() + (this->per_sample * this->ac));
         this->rnnoise_pos -= this->per_sample * this->ac;
     }
-    #endif
     return true;
 }

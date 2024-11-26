@@ -35,8 +35,8 @@ static void testEncode() {
 static void testOpus() {
     std::ifstream input;
     // input.open("D:/tmp/audio.opus", std::ios_base::binary);
-    input.open("D:/download/audio.opus", std::ios_base::binary);
-    // input.open("D:/tmp/audio.pack.opus", std::ios_base::binary);
+    input.open("D:/tmp/audio.pack.1.opus", std::ios_base::binary);
+    // input.open("D:/tmp/audio.pack.2.opus", std::ios_base::binary);
     std::ofstream output;
     output.open("D:/tmp/audio.rnnoise.opus", std::ios::trunc | std::ios_base::binary);
     if(!input.is_open()) {
@@ -49,6 +49,7 @@ static void testOpus() {
         output.close();
         return;
     }
+    // guiguzi::Rnnoise rnnoise(2, 48000, 10, 16);
     guiguzi::Rnnoise rnnoise(1, 48000, 20, 16);
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
