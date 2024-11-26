@@ -49,7 +49,7 @@ static void testOpus() {
         output.close();
         return;
     }
-    guiguzi::Rnnoise rnnoise(2, 48000, 20, 16);
+    guiguzi::Rnnoise rnnoise(1, 48000, 20, 16);
     if(!rnnoise.init()) {
         std::cout << "加载rnnoise失败\n";
         input.close();

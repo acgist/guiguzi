@@ -32,7 +32,7 @@ bool guiguzi::Rnnoise::init() {
         return false;
     }
     opus_decoder_ctl(this->decoder, OPUS_SET_DTX(1));
-    opus_decoder_ctl(this->decoder, OPUS_SET_VBR(1));
+    // opus_decoder_ctl(this->decoder, OPUS_SET_VBR(1));
     opus_decoder_ctl(this->decoder, OPUS_SET_INBAND_FEC(1));
     opus_decoder_ctl(this->decoder, OPUS_SET_LSB_DEPTH(this->bits));
     this->encoder = opus_encoder_create(this->ar, this->ac, OPUS_APPLICATION_VOIP, &error_code);
@@ -43,7 +43,9 @@ bool guiguzi::Rnnoise::init() {
         return false;
     }
     opus_encoder_ctl(this->encoder, OPUS_SET_DTX(1));
-    opus_encoder_ctl(this->encoder, OPUS_SET_VBR(1));
+    // opus_encoder_ctl(this->encoder, OPUS_SET_VBR(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_BITRATE(64'000));
+    opus_encoder_ctl(this->encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
     opus_encoder_ctl(this->encoder, OPUS_SET_INBAND_FEC(1));
     opus_encoder_ctl(this->encoder, OPUS_SET_LSB_DEPTH(this->bits));
     return true;
@@ -102,8 +104,10 @@ bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
         }
         this->sweet(this->buffer_denoise);
         for(size_t index = 0; index < RNNOISE_FRAME; ++index) {
-            this->buffer_rnnoise[this->rnnoise_pos + this->ac * index] = this->buffer_denoise[index];
-            if(this->ac == 2) {
+            if(this->ac == 1) {
+                this->buffer_rnnoise[this->rnnoise_pos + this->ac * index] = this->buffer_denoise[index];
+            } else {
+                this->buffer_rnnoise[this->rnnoise_pos + this->ac * index    ] = this->buffer_denoise[index];
                 this->buffer_rnnoise[this->rnnoise_pos + this->ac * index + 1] = this->buffer_denoise[index];
             }
         }
