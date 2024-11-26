@@ -13,6 +13,7 @@ logs
 build
 target
 
+deps/opus
 deps/ffmpeg
 deps/opencv
 deps/spdlog

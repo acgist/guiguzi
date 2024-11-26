@@ -112,15 +112,18 @@ if(CMAKE_HOST_WIN32)
     set(
         CMAKE_PREFIX_PATH
         ${CMAKE_PREFIX_PATH}
+        deps/opus
         deps/opencv
         deps/spdlog
     )
 
     if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    file(GLOB FFMPEG_DLLS "deps/ffmpeg/debug/bin/*.dll")
+        file(GLOB OPUS_DLLS   "deps/opus/debug/bin/*.dll")
+        file(GLOB FFMPEG_DLLS "deps/ffmpeg/debug/bin/*.dll")
         file(GLOB SPDLOG_DLLS "deps/spdlog/debug/bin/*.dll")
         file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100d.dll" "deps/opencv/x64/vc16/bin/opencv_videoio_ffmpeg4100_64.dll")
     else()
+        file(GLOB OPUS_DLLS   "deps/opus/bin/*.dll")
         file(GLOB FFMPEG_DLLS "deps/ffmpeg/bin/*.dll")
         file(GLOB SPDLOG_DLLS "deps/spdlog/bin/*.dll")
         file(GLOB OPENCV_DLLS "deps/opencv/x64/vc16/bin/opencv_world4100.dll" "deps/opencv/x64/vc16/bin/opencv_videoio_ffmpeg4100_64.dll")
@@ -133,6 +136,7 @@ if(CMAKE_HOST_WIN32)
     find_package(FFMPEG REQUIRED)
 endif()
 
+find_package(Opus  REQUIRED)
 find_package(Torch  REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)

@@ -35,6 +35,7 @@ if(CMAKE_HOST_WIN32)
 
     add_custom_command(
         TARGET guiguzi POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPUS_DLLS}        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TORCH_DLLS}       ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FFMPEG_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_DLLS}      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}

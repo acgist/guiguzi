@@ -23,3 +23,24 @@ else()
         swresample
     )
 endif()
+
+add_executable(
+    testOpus
+    rnnoise/Opus.cpp
+    rnnoise/opus/Guiguzi.cpp
+)
+add_test(NAME testOpus COMMAND testOpus)
+set_target_properties(testOpus PROPERTIES FOLDER "audio")
+if(CMAKE_HOST_WIN32)
+    target_link_libraries(
+        testOpus
+        rnnoise
+        Opus::opus
+    )
+else()
+    target_link_libraries(
+        testOpus
+        rnnoise
+        opus
+    )
+endif()
