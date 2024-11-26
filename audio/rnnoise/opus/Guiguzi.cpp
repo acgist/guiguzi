@@ -23,29 +23,29 @@ guiguzi::Rnnoise::~Rnnoise() {
 bool guiguzi::Rnnoise::init() {
     this->denoise = rnnoise_create(NULL);
     this->buffer_denoise = new float[RNNOISE_FRAME];
+    this->per_sample = this->ar / 1000 * this->hz;
+    this->per_size   = this->per_sample * this->bits / 8 * this->ac;
     int error_code = 0;
     this->decoder = opus_decoder_create(this->ar, this->ac, &error_code);
     if(!this->decoder) {
         std::cout << "打开解码器失败：" << error_code << '\n';
         return false;
     }
-    this->per_sample = this->ar / 1000 * this->hz;
-    this->per_size   = this->per_sample * this->bits / 8 * this->ac;
-    // opus_decoder_ctl(this->decoder, OPUS_SET_LSB_DEPTH(this->bits));
+    opus_decoder_ctl(this->decoder, OPUS_SET_DTX(1));
+    opus_decoder_ctl(this->decoder, OPUS_SET_VBR(1));
+    opus_decoder_ctl(this->decoder, OPUS_SET_INBAND_FEC(1));
+    opus_decoder_ctl(this->decoder, OPUS_SET_LSB_DEPTH(this->bits));
     this->encoder = opus_encoder_create(this->ar, this->ac, OPUS_APPLICATION_VOIP, &error_code);
+    // this->encoder = opus_encoder_create(this->ar, this->ac, OPUS_APPLICATION_AUDIO, &error_code);
     // this->encoder = opus_encoder_create(this->ar, this->ac, OPUS_APPLICATION_RESTRICTED_LOWDELAY, &error_code);
     if(!this->encoder) {
         std::cout << "打开编码器失败：" << error_code << '\n';
         return false;
     }
-    // opus_encoder_ctl(this->encoder, OPUS_SET_VBR(1));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_DTX(0));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_BITRATE(128'000));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_LSB_DEPTH(this->bits));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_INBAND_FEC(0));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_COMPLEXITY(8));
-    // opus_encoder_ctl(this->encoder, OPUS_SET_VBR_CONSTRAINT(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_DTX(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_VBR(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_INBAND_FEC(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_LSB_DEPTH(this->bits));
     return true;
 }
 
@@ -97,14 +97,14 @@ bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
     // 删除多余数据
     this->buffer_rnnoise.resize(remaining_size + nb_samples * this->ac);
     while(this->buffer_rnnoise.size() >= this->rnnoise_pos + RNNOISE_FRAME * this->ac) {
-        for(size_t index = 0; index < RNNOISE_FRAME * this->ac; index += this->ac) {
-            this->buffer_denoise[index / this->ac] = this->buffer_rnnoise[index];
+        for(size_t index = 0; index < RNNOISE_FRAME; ++index) {
+            this->buffer_denoise[index] = this->buffer_rnnoise[this->rnnoise_pos + this->ac * index];
         }
         this->sweet(this->buffer_denoise);
-        for(size_t index = 0; index < RNNOISE_FRAME * this->ac; index += this->ac) {
-            this->buffer_rnnoise[index] = this->buffer_denoise[index / this->ac];
+        for(size_t index = 0; index < RNNOISE_FRAME; ++index) {
+            this->buffer_rnnoise[this->rnnoise_pos + this->ac * index] = this->buffer_denoise[index];
             if(this->ac == 2) {
-                this->buffer_rnnoise[index + 1] = this->buffer_denoise[index / this->ac];
+                this->buffer_rnnoise[this->rnnoise_pos + this->ac * index + 1] = this->buffer_denoise[index];
             }
         }
         this->rnnoise_pos += RNNOISE_FRAME * this->ac;
