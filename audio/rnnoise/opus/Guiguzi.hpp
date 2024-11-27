@@ -43,7 +43,7 @@ public:
     size_t bits{ 0 }; // 位深
     size_t per_size   { 0 }; // 采样大小：采样数量 * 位深 / 8 * 通道数
     size_t per_sample { 0 }; // 采样数量：采样率 / 1000 * 采样频率
-    size_t end_sample { 0 }; // 尾部偏移
+    size_t rnnoise_end{ 0 }; // 尾部偏移
     size_t rnnoise_pos{ 0 }; // 降噪偏移
     OpusDecoder* decoder{ nullptr }; // 解码器
     OpusEncoder* encoder{ nullptr }; // 解码器

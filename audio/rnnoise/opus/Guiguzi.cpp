@@ -25,7 +25,7 @@ bool guiguzi::Rnnoise::init() {
     this->buffer_denoise = new float[RNNOISE_FRAME];
     this->per_sample = this->ar / 1000 * this->hz;
     this->per_size   = this->per_sample * this->bits / 8 * this->ac;
-    this->buffer_rnnoise.resize(this->per_size * 2);
+    this->buffer_rnnoise.resize(this->per_size * 4);
     int error_code = 0;
     this->decoder = opus_decoder_create(this->ar, this->ac, &error_code);
     if(!this->decoder) {
@@ -93,22 +93,28 @@ bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
     if(size <= 0) {
         return false;
     }
-    const int nb_samples = opus_decode(this->decoder, input, size, this->buffer_rnnoise.data() + this->end_sample, this->per_sample, 0);
+    const int nb_samples = opus_decode(this->decoder, input, size, this->buffer_rnnoise.data() + this->rnnoise_end, this->per_sample, 0);
     if(nb_samples <= 0) {
         return false;
     }
-    this->end_sample += (nb_samples * this->ac);
-    if(this->end_sample >= this->buffer_rnnoise.size()) {
+    this->rnnoise_end += (nb_samples * this->ac);
+    if(this->rnnoise_end >= this->buffer_rnnoise.size()) {
         // 数据缓存满了直接清空
-        this->end_sample  = 0;
+        this->rnnoise_end = 0;
         this->rnnoise_pos = 0;
         return false;
     }
-    while(this->end_sample >= this->rnnoise_pos + RNNOISE_FRAME * this->ac) {
+    while(this->rnnoise_end >= this->rnnoise_pos + RNNOISE_FRAME * this->ac) {
+        // 重采样格式
+        // packed: LRLRLRLR
+        // planar: LLLLRRRR
+        // 向下重采样
         for(size_t index = 0; index < RNNOISE_FRAME; ++index) {
             this->buffer_denoise[index] = this->buffer_rnnoise[this->rnnoise_pos + this->ac * index];
         }
+        // 降噪
         this->sweet(this->buffer_denoise);
+        // 向上重采样
         for(size_t index = 0; index < RNNOISE_FRAME; ++index) {
             if(this->ac == 1) {
                 this->buffer_rnnoise[this->rnnoise_pos + this->ac * index] = this->buffer_denoise[index];
@@ -123,20 +129,22 @@ bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
 }
 
 bool guiguzi::Rnnoise::getSweet(std::vector<char>& out, size_t& size) {
-    if(this->end_sample <= 0 || this->rnnoise_pos <= 0) {
+    if(this->rnnoise_end <= 0 || this->rnnoise_pos <= 0) {
         return false;
     }
-    #ifdef __PCM__
+    #ifndef __PCM__
     size = this->rnnoise_pos * sizeof(short);
     std::memcpy(out.data(), this->buffer_rnnoise.data(), size);
-    this->end_sample  -= this->rnnoise_pos;
+    this->rnnoise_end -= this->rnnoise_pos;
     this->rnnoise_pos -= this->rnnoise_pos;
     #else
     size = opus_encode(this->encoder, this->buffer_rnnoise.data(), this->per_sample, reinterpret_cast<unsigned char*>(out.data()), this->per_size);
-    if(size > 0) {
-        const int sample_size = this->per_sample * this->ac;
-        this->end_sample  -= sample_size;
-        this->rnnoise_pos -= sample_size;
+    const int sample_size = this->per_sample * this->ac;
+    this->rnnoise_end -= sample_size;
+    this->rnnoise_pos -= sample_size;
+    if(this->rnnoise_end > 0) {
+        // 正常分包不会出现
+        std::copy(this->buffer_rnnoise.begin() + sample_size, this->buffer_rnnoise.begin() + sample_size + this->rnnoise_end, this->buffer_rnnoise.begin());
     }
     #endif
     return true;
