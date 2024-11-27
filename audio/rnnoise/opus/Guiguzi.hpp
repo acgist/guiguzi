@@ -36,13 +36,14 @@ class Rnnoise {
 public:
     DenoiseState*      denoise       { nullptr }; // 降噪对象
     float       *      buffer_denoise{ nullptr }; // 降噪缓存
-    std::vector<short> buffer_rnnoise;            // 降噪缓存
+    std::vector<short> buffer_rnnoise;            // 降噪缓存：默认16bit
     size_t ac  { 0 }; // 通道数
     size_t ar  { 0 }; // 采样率
     size_t hz  { 0 }; // 采样频率（毫秒）
     size_t bits{ 0 }; // 位深
     size_t per_size   { 0 }; // 采样大小：采样数量 * 位深 / 8 * 通道数
     size_t per_sample { 0 }; // 采样数量：采样率 / 1000 * 采样频率
+    size_t end_sample { 0 }; // 尾部偏移
     size_t rnnoise_pos{ 0 }; // 降噪偏移
     OpusDecoder* decoder{ nullptr }; // 解码器
     OpusEncoder* encoder{ nullptr }; // 解码器
@@ -54,8 +55,8 @@ public:
     void sweet(short  * input); // 降噪
     void sweet(float  * input); // 降噪
     void sweet(uint8_t* input); // 降噪
-    bool putSweet(uint8_t* input, const size_t& size); // 封装格式降噪
-    bool getSweet(std::vector<char>& out);             // 读取封装数据
+    bool putSweet(uint8_t* input, const size_t& size);   // 封装格式降噪
+    bool getSweet(std::vector<char>& out, size_t& size); // 读取封装数据
 
 public:
     Rnnoise(size_t ac = 2, size_t ar = 48000, size_t hz = 10, size_t bits = 16);

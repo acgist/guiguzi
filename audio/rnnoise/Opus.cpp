@@ -12,6 +12,8 @@ static void testEncode() {
     output.open("D:/tmp/audio.rnnoise.opus", std::ios::trunc | std::ios_base::binary);
     std::vector<char> out;
     std::vector<char> data;
+    out.resize(16 * 1024);
+    size_t size = 0;
     data.resize(1920); // 48000 / 1000 * 10 * 2 * 2
     guiguzi::Rnnoise rnnoise;
     rnnoise.init();
@@ -19,12 +21,11 @@ static void testEncode() {
         rnnoise.rnnoise_pos = 960;
         rnnoise.buffer_rnnoise.resize(960);
         std::memcpy(rnnoise.buffer_rnnoise.data(), data.data(), 1920);
-        if(rnnoise.getSweet(out)) {
-            int size = out.size();
+        if(rnnoise.getSweet(out, size)) {
             std::cout << size << '\n';
-            output.write(reinterpret_cast<char*>(&size), sizeof(size));
-            output.write(out.data(), out.size());
-            out.clear();
+            int buffer_size = size;
+            output.write(reinterpret_cast<char*>(&buffer_size), sizeof(buffer_size));
+            output.write(out.data(), size);
         }
     }
     input.close();
@@ -60,15 +61,17 @@ static void testOpus() {
     }
     std::vector<char> out;
     std::vector<char> data;
-    int size = 0;
-    while(input.read(reinterpret_cast<char*>(&size), sizeof(size))) {
-        data.resize(size);
-        input.read(data.data(), size);
-        rnnoise.putSweet(reinterpret_cast<uint8_t*>(data.data()), data.size());
-        if(rnnoise.getSweet(out)) {
-            // std::cout << "====" << out.size() << '\n';
-            output.write(out.data(), out.size());
-            out.clear();
+    out.resize(16 * 1024);
+    size_t size = 0;
+    int buffer_size = 0;
+    while(input.read(reinterpret_cast<char*>(&buffer_size), sizeof(buffer_size))) {
+        data.resize(buffer_size);
+        input.read(data.data(), buffer_size);
+        rnnoise.putSweet(reinterpret_cast<uint8_t*>(data.data()), buffer_size);
+        if(rnnoise.getSweet(out, size)) {
+            // std::cout << "====" << size << '\n';
+            output.write(out.data(), size);
+            size = 0;
         }
     }
     input.close();

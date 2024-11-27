@@ -97,11 +97,23 @@ model = YOLO('yolo11n.pt')
 model.train(
     data       = '/data/yolo/ultralytics/data.yaml',
     imgsz      = 640,
-    epochs     = 100,
-    single_cls = True,  
+    epochs     = 200,
+    single_cls = False,  
     batch      = 16,
-    workers    = 10,
+    workers    = 16,
 #   device     = 'cuda',
 )
+model.export(format="onnx")
+---
+
+python3 train.py
+
+# 模型转换
+
+---
+from ultralytics import YOLO
+ 
+model = YOLO('./best.pt')
+model.export(format="onnx")
 ---
 ```

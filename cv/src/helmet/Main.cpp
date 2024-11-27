@@ -64,7 +64,7 @@ static cv::Mat formatToSquare(const cv::Mat &source) {
     return result;
 }
 
-static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inputNodeDims) {
+static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inputNodeDims, std::vector<float>& percent, std::vector<int64_t>& classify) {
     Ort::Value inputTensor = Ort::Value::CreateTensor<typename std::remove_pointer<float*>::type>(
         Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU),
         blob,
@@ -82,10 +82,9 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     auto tensor_info = typeInfo.GetTensorTypeAndShapeInfo();
     std::vector<int64_t> outputNodeDims = tensor_info.GetShape();
     auto output = outputTensor.front().GetTensorMutableData<typename std::remove_pointer<float*>::type>();
-    // TODO: 多个结果是否需要转置
     // 转换
-    int signalResultNum = outputNodeDims[1]; // 20
-    int strideNum       = outputNodeDims[2]; // 8400
+    int signalResultNum = outputNodeDims[1];
+    int strideNum       = outputNodeDims[2];
     std::vector<int> class_ids;
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
@@ -94,19 +93,20 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     rawData = rawData.t();
     float* data = (float*) rawData.data;
     for (int i = 0; i < strideNum; ++i) {
+        // if(data[4] > 0.01 || data[5] > 0.01) {
+        //     SPDLOG_DEBUG("----------------{:.6f} {:.6f}", data[4], data[5]);
+        // }
         float* classesScores = data + 4;
-        // 20 - 4
         cv::Point class_id;
         cv::Mat scores(1, 2, CV_32FC1, classesScores);
         double maxClassScore;
         cv::minMaxLoc(scores, 0, &maxClassScore, 0, &class_id);
-        // for(int x = 0; x < signalResultNum; ++x) {
-        //     SPDLOG_DEBUG("========== {}", data[x]);
-        // }
-        // SPDLOG_DEBUG("----------------{}", maxClassScore);
         if (maxClassScore > 0.1) { // 置信度
-            confidences.push_back(maxClassScore);
-            class_ids.push_back(class_id.x);
+            // for(int x = 0; x < signalResultNum; ++x) {
+            //     SPDLOG_DEBUG("========== {}", data[x]);
+            // }
+            // SPDLOG_DEBUG("----------------{}", maxClassScore);
+
             float x = data[0];
             float y = data[1];
             float w = data[2];
@@ -117,6 +117,9 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
 
             int width  = int(w * resizeScales);
             int height = int(h * resizeScales);
+
+            confidences.push_back(maxClassScore);
+            class_ids.push_back(class_id.x);
             boxes.push_back(cv::Rect(left, top, width, height));
         }
         data += signalResultNum;
@@ -126,7 +129,9 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     cv::dnn::NMSBoxes(boxes, confidences, 0.1, 0.0, nmsResult);
     for(const auto& i : nmsResult) {
         rest.push_back(boxes[i]);
-        SPDLOG_DEBUG("类型：{}", class_ids[i]);
+        percent.push_back(confidences[i]);
+        classify.push_back(class_ids[i]);
+        // SPDLOG_DEBUG("类型：{}", class_ids[i]);
     }
     return rest;
 }
@@ -138,10 +143,34 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     cv::dnn::blobFromImage(target, input, 1.0 / 255.0, modelShape, cv::Scalar(), true, false);
     float* blob = reinterpret_cast<float*>(input.data);
     std::vector<int64_t> inputNodeDims = { 1, 3, 640, 640 };
+    std::vector<float> percent;
+    std::vector<int64_t> classify;
     // postProcess(reinterpret_cast<float*>(input.data), inputNodeDims);
-    std::vector<cv::Rect> boxs = postProcess(blob, inputNodeDims);
+    std::vector<cv::Rect> boxs = postProcess(blob, inputNodeDims, percent, classify);
+    auto label = percent.begin();
+    auto classify_name = classify.begin();
+    // const char* classify_names[] { "helment", "person" };
     for(const auto& rect : boxs) {
         cv::rectangle(source, rect, cv::Scalar{ 255, 0, 0 });
+        cv::putText(
+            source,
+            std::to_string(*label),
+            cv::Point(rect.x, rect.y),
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.75,
+            cv::Scalar(0, 0, 0),
+            2
+        );
+        // cv::putText(
+        //     source,
+        //     classify_names[*classify_name],
+        //     cv::Point(rect.x, rect.y + 20),
+        //     cv::FONT_HERSHEY_SIMPLEX,
+        //     0.75,
+        //     cv::Scalar(0, 0, 0),
+        //     2
+        // );
+        ++label;
     }
 }
 
@@ -150,8 +179,9 @@ int main() {
     createSession();
     // auto input = cv::imread("D:/tmp/helmet/train/1.jpg");
     // auto input = cv::imread("D:/tmp/helmet/val/34.jpg");
+    // auto input = cv::imread("D:/tmp/helmet/1.jpg");
     // run(input);
-    // cv::namedWindow("input", cv::WINDOW_NORMAL);
+    // cv::namedWindow("input");
     // cv::imshow("input", input);
     cv::VideoCapture capture(0);
     capture.isOpened();

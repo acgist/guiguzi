@@ -25,6 +25,7 @@ bool guiguzi::Rnnoise::init() {
     this->buffer_denoise = new float[RNNOISE_FRAME];
     this->per_sample = this->ar / 1000 * this->hz;
     this->per_size   = this->per_sample * this->bits / 8 * this->ac;
+    this->buffer_rnnoise.resize(this->per_size * 2);
     int error_code = 0;
     this->decoder = opus_decoder_create(this->ar, this->ac, &error_code);
     if(!this->decoder) {
@@ -89,16 +90,21 @@ void guiguzi::Rnnoise::sweet(float* input) {
 }
 
 bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
-    const int remaining_size = this->buffer_rnnoise.size();
-    this->buffer_rnnoise.resize(remaining_size + this->per_size);
-    const int nb_samples = opus_decode(this->decoder, input, size, this->buffer_rnnoise.data(), this->per_sample, 0);
-    if(nb_samples <= 0) {
-        this->buffer_rnnoise.resize(remaining_size);
+    if(size <= 0) {
         return false;
     }
-    // 删除多余数据
-    this->buffer_rnnoise.resize(remaining_size + nb_samples * this->ac);
-    while(this->buffer_rnnoise.size() >= this->rnnoise_pos + RNNOISE_FRAME * this->ac) {
+    const int nb_samples = opus_decode(this->decoder, input, size, this->buffer_rnnoise.data() + this->end_sample, this->per_sample, 0);
+    if(nb_samples <= 0) {
+        return false;
+    }
+    this->end_sample += (nb_samples * this->ac);
+    if(this->end_sample >= this->buffer_rnnoise.size()) {
+        // 数据缓存满了直接清空
+        this->end_sample  = 0;
+        this->rnnoise_pos = 0;
+        return false;
+    }
+    while(this->end_sample >= this->rnnoise_pos + RNNOISE_FRAME * this->ac) {
         for(size_t index = 0; index < RNNOISE_FRAME; ++index) {
             this->buffer_denoise[index] = this->buffer_rnnoise[this->rnnoise_pos + this->ac * index];
         }
@@ -116,22 +122,22 @@ bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
     return true;
 }
 
-bool guiguzi::Rnnoise::getSweet(std::vector<char>& out) {
-    if(this->rnnoise_pos <= 0) {
+bool guiguzi::Rnnoise::getSweet(std::vector<char>& out, size_t& size) {
+    if(this->end_sample <= 0 || this->rnnoise_pos <= 0) {
         return false;
     }
     #ifdef __PCM__
-    const int size = this->rnnoise_pos * sizeof(short);
-    out.resize(size);
+    size = this->rnnoise_pos * sizeof(short);
     std::memcpy(out.data(), this->buffer_rnnoise.data(), size);
+    this->end_sample  -= this->rnnoise_pos;
+    this->rnnoise_pos -= this->rnnoise_pos;
     #else
-    out.resize(this->per_size);
-    const int size = opus_encode(this->encoder, this->buffer_rnnoise.data(), this->per_sample * this->ac, reinterpret_cast<unsigned char*>(out.data()), this->per_size);
-    out.resize(size);
-    #endif
+    size = opus_encode(this->encoder, this->buffer_rnnoise.data(), this->per_sample, reinterpret_cast<unsigned char*>(out.data()), this->per_size);
     if(size > 0) {
-        this->buffer_rnnoise.erase(this->buffer_rnnoise.begin(), this->buffer_rnnoise.begin() + (this->per_sample * this->ac));
-        this->rnnoise_pos -= this->per_sample * this->ac;
+        const int sample_size = this->per_sample * this->ac;
+        this->end_sample  -= sample_size;
+        this->rnnoise_pos -= sample_size;
     }
+    #endif
     return true;
 }

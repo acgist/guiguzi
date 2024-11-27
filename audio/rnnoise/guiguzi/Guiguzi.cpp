@@ -206,6 +206,9 @@ bool guiguzi::Rnnoise::putSweet(uint8_t* input, const size_t& size) {
 }
 
 bool guiguzi::Rnnoise::swrDecode(uint8_t* input, const size_t& size) {
+    if(size <= 0) {
+        return false;
+    }
     // 解码
     this->packet->data = input;
     this->packet->size = size;
