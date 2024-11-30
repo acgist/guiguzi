@@ -29,7 +29,7 @@ static std::vector<const char*> outputNodeNames;
     options.SetIntraOpNumThreads(1);
     options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     #if _WIN32
-    session = new Ort::Session(*env, L"D:/tmp/helmet/helment.onnx", options);
+    session = new Ort::Session(*env, L"D:/tmp/helmet/best.onnx", options);
     #else 
     session = new Ort::Session(*env, "D:/tmp/helmet/helment.onnx", options);
     #endif
@@ -149,7 +149,7 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
     std::vector<cv::Rect> boxs = postProcess(blob, inputNodeDims, percent, classify);
     auto label = percent.begin();
     auto classify_name = classify.begin();
-    // const char* classify_names[] { "helment", "person" };
+    const char* classify_names[] { "helment", "person" };
     for(const auto& rect : boxs) {
         cv::rectangle(source, rect, cv::Scalar{ 255, 0, 0 });
         cv::putText(
@@ -161,16 +161,17 @@ static std::vector<cv::Rect> postProcess(float* blob, std::vector<int64_t>& inpu
             cv::Scalar(0, 0, 0),
             2
         );
-        // cv::putText(
-        //     source,
-        //     classify_names[*classify_name],
-        //     cv::Point(rect.x, rect.y + 20),
-        //     cv::FONT_HERSHEY_SIMPLEX,
-        //     0.75,
-        //     cv::Scalar(0, 0, 0),
-        //     2
-        // );
+        cv::putText(
+            source,
+            classify_names[*classify_name],
+            cv::Point(rect.x, rect.y + 20),
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.75,
+            cv::Scalar(0, 0, 0),
+            2
+        );
         ++label;
+        ++classify_name;
     }
 }
 
@@ -183,16 +184,26 @@ int main() {
     // run(input);
     // cv::namedWindow("input");
     // cv::imshow("input", input);
+    // cv::waitKey(0);
     cv::VideoCapture capture(0);
     capture.isOpened();
     cv::Mat frame;
+    // cv::VideoWriter writer(
+    //     "D:/tmp/camera.mp4",
+    //     cv::VideoWriter::fourcc('m', 'p', '4', 'v'),
+    //     25,
+    //     cv::Size(capture.get(cv::CAP_PROP_FRAME_WIDTH), capture.get(cv::CAP_PROP_FRAME_HEIGHT))
+    // );
     while(true) {
         capture >> frame;
         run(frame);
+        // writer.write(frame);
         cv::imshow("input", frame);
-        cv::waitKey(10);
+        auto key = cv::waitKey(10);
+        if(key == 'q') {
+            break;
+        }
     }
-    cv::waitKey(0);
     guiguzi::logger::shutdown();
     return 0;
 }

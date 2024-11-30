@@ -10,6 +10,17 @@ target_link_libraries(
 )
 
 add_executable(
+    testSafebelt
+    src/safebelt/Main.cpp
+)
+add_test(NAME testSafebelt COMMAND testSafebelt)
+set_target_properties(testSafebelt PROPERTIES FOLDER "cv")
+target_link_libraries(
+    testSafebelt
+    guiguziboot
+)
+
+add_executable(
     testOpenCV
     src/opencv/Main.cpp
 )

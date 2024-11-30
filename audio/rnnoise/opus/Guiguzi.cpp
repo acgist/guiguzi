@@ -132,7 +132,7 @@ bool guiguzi::Rnnoise::getSweet(std::vector<char>& out, size_t& size) {
     if(this->rnnoise_end <= 0 || this->rnnoise_pos <= 0) {
         return false;
     }
-    #ifndef __PCM__
+    #ifdef __PCM__
     size = this->rnnoise_pos * sizeof(short);
     std::memcpy(out.data(), this->buffer_rnnoise.data(), size);
     this->rnnoise_end -= this->rnnoise_pos;
