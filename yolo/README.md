@@ -56,7 +56,7 @@ model.train(
     data       = '/data/yolo/ultralytics/data.yaml',
     imgsz      = 640,
     epochs     = 200,
-    single_cls = False,  
+    single_cls = False,
     batch      = 16,
     workers    = 16,
 #   device     = 'cuda',
