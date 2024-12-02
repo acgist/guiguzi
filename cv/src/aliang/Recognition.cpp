@@ -34,8 +34,8 @@ static bool check_point(int w, int h, const cv::Rect& rect, const std::vector<cv
 guiguzi::Recognition::Recognition(
     const std::string& face_model,    const char* face_logid,
     const std::string& feature_model, const char* feature_logid,
-    float confidenceThreshold, float iouThreshold
-) {
+    float threshold, float confidenceThreshold, float iouThreshold
+) : threshold(threshold) {
     std::vector<std::string> classes{ "face" };
     this->faceModel = std::make_unique<guiguzi::OnnxRuntime>(640, classes, confidenceThreshold, iouThreshold);
     this->faceModel->createSession(face_model, face_logid);
@@ -120,12 +120,12 @@ void guiguzi::Recognition::storage(const std::string& name, std::vector<cv::Mat>
         }
         if(!check_point(image.cols, image.rows, rect, points)) {
             SPDLOG_INFO("人脸数据错误：{}", name);
-            return;
+            continue;
         }
         image = image(rect);
         if(!this->center(image, points)) {
             SPDLOG_INFO("人脸数据错误：{}", name);
-            return;
+            continue;
         }
         std::vector<float> feature;
         this->feature(image, feature);

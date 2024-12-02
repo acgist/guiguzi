@@ -112,7 +112,7 @@ public:
     Recognition(
         const std::string& face_model,    const char* face_logid,
         const std::string& feature_model, const char* feature_logid,
-        float confidenceThreshold = 0.4F, float iouThreshold = 0.6F
+        float threshold = 0.8F, float confidenceThreshold = 0.4F, float iouThreshold = 0.6F
     );
 
 public:

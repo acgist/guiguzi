@@ -33,6 +33,7 @@ void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
     auto class_id   = class_ids.begin();
     auto confidence = confidences.begin();
     for(const auto& rect : boxes) {
+        // 人脸识别
         cv::Mat face = image(rect).clone();
         auto person = recognition.recognition(face);
         if(!person.first.empty()) {
@@ -55,6 +56,7 @@ void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
                 2
             );
         }
+        // 物体检测
         cv::rectangle(image, rect, cv::Scalar{ 255, 0, 0 });
         cv::putText(
             image,
