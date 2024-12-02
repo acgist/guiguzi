@@ -23,6 +23,10 @@ void guiguzi::Detection::detection(
     cv::Mat output;
     float* blob = guiguzi::formatImage(this->model->wh, image, output, scale);
     this->model->run(blob, scale, class_ids, confidences, boxes);
+    // 修正参数
+    for(auto& rect : boxes) {
+        guiguzi::fixRect(image, rect);
+    }
 }
 
 void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
@@ -32,7 +36,7 @@ void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
     this->detection(image, class_ids, confidences, boxes);
     auto class_id   = class_ids.begin();
     auto confidence = confidences.begin();
-    for(const auto& rect : boxes) {
+    for(auto& rect : boxes) {
         // 人脸识别
         cv::Mat face = image(rect).clone();
         auto person = recognition.recognition(face);

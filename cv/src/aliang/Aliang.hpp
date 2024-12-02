@@ -24,6 +24,7 @@ namespace guiguzi {
 
 // 处理图片
 extern float* formatImage(int wh, const cv::Mat& source, cv::Mat& target, float& scale);
+extern void   fixRect(const::cv::Mat& image, cv::Rect& rect);
 
 /**
  * ONNX运行环境

@@ -13,24 +13,6 @@ static std::vector<cv::Point> center_mat{
     cv::Point(70.7299, 92.2041)
 };
 
-static bool check_point(int w, int h, const cv::Rect& rect, const std::vector<cv::Point>& points) {
-    if(rect.x + rect.width > w || rect.y + rect.height > h) {
-        return false;
-    }
-    if(rect.x < 0 || rect.y < 0 || rect.width <= 0 || rect.height <= 0) {
-        return false;
-    }
-    if(points.size() != 5) {
-        return false;
-    }
-    for(auto& point : points) {
-        if(point.x < 0 || point.y < 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
 guiguzi::Recognition::Recognition(
     const std::string& face_model,    const char* face_logid,
     const std::string& feature_model, const char* feature_logid,
@@ -62,9 +44,6 @@ bool guiguzi::Recognition::center(cv::Mat& image, std::vector<cv::Point>& points
     for(auto& point : points) {
         point.x -= rect.x;
         point.y -= rect.y;
-    }
-    if(!check_point(image.cols, image.rows, rect, points)) {
-        return false;
     }
     image = image(rect);
     float scale = 1.0F * this->featureModel->wh / min;
@@ -118,10 +97,7 @@ void guiguzi::Recognition::storage(const std::string& name, std::vector<cv::Mat>
             point.x -= rect.x;
             point.y -= rect.y;
         }
-        if(!check_point(image.cols, image.rows, rect, points)) {
-            SPDLOG_INFO("人脸数据错误：{}", name);
-            continue;
-        }
+        guiguzi::fixRect(image, rect);
         image = image(rect);
         if(!this->center(image, points)) {
             SPDLOG_INFO("人脸数据错误：{}", name);
@@ -170,9 +146,7 @@ std::pair<std::string, double> guiguzi::Recognition::recognition(cv::Mat& image)
         point.x -= rect.x;
         point.y -= rect.y;
     }
-    if(!check_point(image.cols, image.rows, rect, points)) {
-        return {};
-    }
+    guiguzi::fixRect(image, rect);
     image = image(rect);
     if(!this->center(image, points)) {
         return {};
