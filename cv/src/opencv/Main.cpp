@@ -163,6 +163,19 @@ constexpr static int timeDuration = 1000 / 25;
     cv::destroyAllWindows();
 }
 
+[[maybe_unused]] static void testRGBBGR() {
+    auto image = cv::imread("D:/tmp/F4.jpg");
+    cv::Mat rgb[3];
+    cv::split(image, rgb);
+    cv::Mat fill(image.rows, image.cols, CV_8UC1);
+    fill.setTo(cv::Scalar(0, 0, 0));
+    cv::Mat output;
+    // cv::Mat output(image.rows, image.cols, CV_8UC3);
+    cv::Mat input[] { rgb[0], fill, fill };
+    cv::merge(input, 3, output);
+    cv::imshow("rgb", output);
+}
+
 int main() {
     guiguzi::logger::init();
     // createWindow();
@@ -170,7 +183,8 @@ int main() {
     // testCamera();
     // testFile();
     // testFileWrite();
-    testTrackbar();
+    // testTrackbar();
+    testRGBBGR();
     cv::waitKey(0);
     // while(true) {
     //     auto key = cv::waitKey(0);

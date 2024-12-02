@@ -1,4 +1,19 @@
 add_executable(
+    aliang
+    src/aliang/Main.cpp
+    src/aliang/Aliang.cpp
+    src/aliang/Detection.cpp
+    src/aliang/Recognition.cpp
+    src/aliang/OnnxRuntime.cpp
+)
+add_test(NAME aliang COMMAND aliang)
+set_target_properties(aliang PROPERTIES FOLDER "cv")
+target_link_libraries(
+    aliang
+    guiguziboot
+)
+
+add_executable(
     testHelmet
     src/helmet/Main.cpp
 )
