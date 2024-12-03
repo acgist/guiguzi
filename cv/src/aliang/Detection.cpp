@@ -65,12 +65,11 @@ void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
                 point.x += rect.x;
                 point.y += rect.y;
             }
-            auto point = points.begin();
-            cv::circle(image, point[0], 2, cv::Scalar{ 255, 255, 0 });
-            cv::circle(image, point[1], 2, cv::Scalar{ 255, 255, 0 });
-            cv::circle(image, point[2], 2, cv::Scalar{ 255, 255, 0 });
-            cv::circle(image, point[3], 2, cv::Scalar{ 255, 255, 0 });
-            cv::circle(image, point[4], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, points[0], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, points[1], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, points[2], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, points[3], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, points[4], 2, cv::Scalar{ 255, 255, 0 });
         }
         // 物体检测
         cv::rectangle(image, rect, cv::Scalar{ 255, 0, 0 });

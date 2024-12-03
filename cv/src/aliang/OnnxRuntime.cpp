@@ -103,7 +103,7 @@ Ort::Value guiguzi::OnnxRuntime::run(
     #ifdef __CUDA__
     // TODO: CUDA
     #else
-    const Ort::Value inputTensor = Ort::Value::CreateTensor<typename std::remove_pointer<float*>::type>(
+    const Ort::Value inputTensor = Ort::Value::CreateTensor<float>(
         Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU),
         blob,
         3 * this->wh * this->wh,
@@ -136,7 +136,7 @@ void guiguzi::OnnxRuntime::run(
         size *= dim;
     }
     ret.resize(size);
-    float* data = output.GetTensorMutableData<typename std::remove_pointer<float*>::type>();
+    float* data = output.GetTensorMutableData<float>();
     std::memcpy(ret.data(), data, ret.size() * sizeof(float));
 }
 
@@ -150,7 +150,7 @@ void guiguzi::OnnxRuntime::run(
     auto output = this->run(blob, dims);
     const int64_t& signalResultNum = dims[1];
     const int64_t& strideNum       = dims[2];
-    float* output_data = output.GetTensorMutableData<typename std::remove_pointer<float*>::type>();
+    float* output_data = output.GetTensorMutableData<float>();
     cv::Mat rawData = cv::Mat(signalResultNum, strideNum, CV_32F, output_data);
     rawData = rawData.t();
     float* data = reinterpret_cast<float*>(rawData.data);
@@ -209,7 +209,7 @@ void guiguzi::OnnxRuntime::run(
     auto output = this->run(blob, dims);
     const int64_t& signalResultNum = dims[1];
     const int64_t& strideNum       = dims[2];
-    float* output_data = output.GetTensorMutableData<typename std::remove_pointer<float*>::type>();
+    float* output_data = output.GetTensorMutableData<float>();
     cv::Mat rawData = cv::Mat(signalResultNum, strideNum, CV_32F, output_data);
     rawData = rawData.t();
     float* data = reinterpret_cast<float*>(rawData.data);
