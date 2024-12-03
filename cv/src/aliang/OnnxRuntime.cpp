@@ -1,6 +1,7 @@
 #include "Aliang.hpp"
 
-// #include <thread>
+#include <atomic>
+#include <thread>
 
 #include "spdlog/spdlog.h"
 
@@ -9,39 +10,47 @@
 
 #include "onnxruntime_cxx_api.h"
 
-static OrtLoggingLevel logg_level = OrtLoggingLevel::ORT_LOGGING_LEVEL_WARNING;
+static Ort::Env*       env      { nullptr }; // ONNX运行环境
+static std::atomic_int env_count{ 0       }; // ONNX环境计数
 
-guiguzi::OnnxRuntime::OnnxRuntime(int wh) : wh(wh) {
-    this->inputNodeDims.push_back(wh);
-    this->inputNodeDims.push_back(wh);
-}
+// 默认日志
+static OrtLoggingLevel log_level = OrtLoggingLevel::ORT_LOGGING_LEVEL_WARNING;
 
 guiguzi::OnnxRuntime::OnnxRuntime(
     int wh,
+    const char* logid,
     const std::vector<std::string>& classes,
     float confidenceThreshold,
     float iouThreshold
 ) : wh(wh),
+    logid(logid),
     classes(classes),
     confidenceThreshold(confidenceThreshold),
     iouThreshold(iouThreshold)
 {
+    ++env_count;
+    if(!env) {
+        env = new Ort::Env(log_level, logid);
+    }
     this->inputNodeDims.push_back(wh);
     this->inputNodeDims.push_back(wh);
 }
 
 guiguzi::OnnxRuntime::~OnnxRuntime() {
-    if(this->env) {
-        this->env->release();
-        delete this->env;
-        this->env = nullptr;
+    if(env && --env_count == 0) {
+        SPDLOG_DEBUG("释放ONNX运行环境：{}", this->logid);
+        env->release();
+        delete env;
+        env = nullptr;
     }
     if(this->session) {
+        SPDLOG_DEBUG("释放ONNX会话：{}", this->logid);
         this->session->release();
         delete this->session;
         this->session = nullptr;
     }
     if(this->runOptions) {
+        SPDLOG_DEBUG("释放ONNX配置：{}", this->logid);
         this->runOptions->release();
         delete this->runOptions;
         this->runOptions = nullptr;
@@ -54,12 +63,11 @@ guiguzi::OnnxRuntime::~OnnxRuntime() {
     }
 }
 
-bool guiguzi::OnnxRuntime::createSession(const std::string& path, const char* logid) {
-    this->env = new Ort::Env(logg_level, logid);
+bool guiguzi::OnnxRuntime::createSession(const std::string& path) {
+    SPDLOG_DEBUG("创建会话：{} - {}", this->logid, path);
     Ort::SessionOptions options;
-    options.SetLogSeverityLevel(static_cast<int>(logg_level));
-    options.SetIntraOpNumThreads(1);
-    // options.SetIntraOpNumThreads(std::thread::hardware_concurrency());
+    options.SetLogSeverityLevel(static_cast<int>(log_level));
+    options.SetIntraOpNumThreads(std::thread::hardware_concurrency());
     options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
     #if _WIN32
     std::wstring wPath(path.begin(), path.end());
@@ -68,17 +76,17 @@ bool guiguzi::OnnxRuntime::createSession(const std::string& path, const char* lo
     this->session = new Ort::Session(*env, path, options);
     #endif
     Ort::AllocatorWithDefaultOptions allocator;
-    const size_t inputNodeCount  = session->GetInputCount();
-    const size_t outputNodeCount = session->GetOutputCount();
+    const size_t inputNodeCount  = this->session->GetInputCount();
+    const size_t outputNodeCount = this->session->GetOutputCount();
     for(size_t index = 0; index < inputNodeCount; ++index) {
-        Ort::AllocatedStringPtr name = session->GetInputNameAllocated(index, allocator);
+        Ort::AllocatedStringPtr name = this->session->GetInputNameAllocated(index, allocator);
         char* copy = new char[32];
         std::strcpy(copy, name.get());
         this->inputNodeNames.push_back(copy);
         SPDLOG_DEBUG("输入节点：{} - {}", index, copy);
     }
     for(size_t index = 0; index < outputNodeCount; ++ index) {
-        Ort::AllocatedStringPtr name = session->GetOutputNameAllocated(index, allocator);
+        Ort::AllocatedStringPtr name = this->session->GetOutputNameAllocated(index, allocator);
         char* copy = new char[32];
         std::strcpy(copy, name.get());
         this->outputNodeNames.push_back(copy);
@@ -88,15 +96,21 @@ bool guiguzi::OnnxRuntime::createSession(const std::string& path, const char* lo
     return true;
 }
 
-Ort::Value guiguzi::OnnxRuntime::run(float* blob, int64_t& signalResultNum, int64_t& strideNum) {
+Ort::Value guiguzi::OnnxRuntime::run(
+    float* blob,               // 图片数据
+    std::vector<int64_t>& dims // 结果维度
+) {
+    #ifdef __CUDA__
     // TODO: CUDA
+    #else
     const Ort::Value inputTensor = Ort::Value::CreateTensor<typename std::remove_pointer<float*>::type>(
         Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU),
         blob,
-        3 * wh * wh,
+        3 * this->wh * this->wh,
         this->inputNodeDims.data(),
         this->inputNodeDims.size()
     );
+    #endif
     auto outputTensor = this->session->Run(
         *this->runOptions,
         inputNodeNames.data(),
@@ -107,19 +121,21 @@ Ort::Value guiguzi::OnnxRuntime::run(float* blob, int64_t& signalResultNum, int6
     );
     Ort::TypeInfo typeInfo = outputTensor.front().GetTypeInfo();
     std::vector<int64_t> outputNodeDims = typeInfo.GetTensorTypeAndShapeInfo().GetShape();
-    if(outputNodeDims.size() == 2) {
-        signalResultNum = outputNodeDims[1]; // 单个结果大小
-        strideNum       = 1;                 // 总的数据大小
-    } else {
-        signalResultNum = outputNodeDims[1]; // 单个结果大小
-        strideNum       = outputNodeDims[2]; // 总的数据大小
-    }
+    dims.swap(outputNodeDims);
     return std::move(outputTensor.front());
 }
 
-void guiguzi::OnnxRuntime::run(float* blob, std::vector<float>& ret, int64_t& signalResultNum, int64_t& strideNum) {
-    auto output = this->run(blob, signalResultNum, strideNum);
-    ret.resize(signalResultNum * strideNum);
+void guiguzi::OnnxRuntime::run(
+    float* blob,               // 图片数据
+    std::vector<float>&   ret, // 结果数据
+    std::vector<int64_t>& dims // 结果维度
+) {
+    auto output = this->run(blob, dims);
+    int size = 1;
+    for(const auto& dim : dims) {
+        size *= dim;
+    }
+    ret.resize(size);
     float* data = output.GetTensorMutableData<typename std::remove_pointer<float*>::type>();
     std::memcpy(ret.data(), data, ret.size() * sizeof(float));
 }
@@ -127,26 +143,27 @@ void guiguzi::OnnxRuntime::run(float* blob, std::vector<float>& ret, int64_t& si
 void guiguzi::OnnxRuntime::run(
     float* blob,                   // 图片数据
     const float& scale,            // 图片缩放
-    std::vector<cv::Rect>& boxes,  // 框
-    std::vector<cv::Point>& points // 关键点：眼睛、鼻子、嘴巴
+    std::vector<cv::Rect> & boxes, // 框
+    std::vector<cv::Point>& points // 关键点：眼睛、眼睛、鼻子、嘴巴、嘴巴
 ) {
-    int64_t signalResultNum = 0;
-    int64_t strideNum       = 0;
-    auto output = this->run(blob, signalResultNum, strideNum);
+    std::vector<int64_t> dims;
+    auto output = this->run(blob, dims);
+    const int64_t& signalResultNum = dims[1];
+    const int64_t& strideNum       = dims[2];
     float* output_data = output.GetTensorMutableData<typename std::remove_pointer<float*>::type>();
     cv::Mat rawData = cv::Mat(signalResultNum, strideNum, CV_32F, output_data);
     rawData = rawData.t();
     float* data = reinterpret_cast<float*>(rawData.data);
-    std::vector<int> class_ids_ori;     // 类型
+    std::vector<int>   class_ids_ori;   // 类型
     std::vector<float> confidences_ori; // 置信度
-    std::vector<cv::Rect> boxes_ori;   // 框
-    std::vector<cv::Point> points_ori; // 关键点
+    std::vector<cv::Rect>  boxes_ori;   // 框
+    std::vector<cv::Point> points_ori;  // 关键点
     for (int index = 0; index < strideNum; ++index) {
-        float* classesScores = data + 4; // x y w h
-        cv::Mat scores(1, this->classes.size(), CV_32FC1, classesScores);
         cv::Point class_id;   // 类别
         double maxConfidence; // 分数
-        cv::minMaxLoc(scores, 0, &maxConfidence, 0, &class_id);
+        float* classesScores = data + 4;
+        cv::Mat scores(1, this->classes.size(), CV_32FC1, classesScores);
+        cv::minMaxLoc(scores, NULL, &maxConfidence, NULL, &class_id);
         if(maxConfidence > this->confidenceThreshold) {
             // 中心x 中心y 宽度 高度
             float x = data[0];
@@ -184,13 +201,14 @@ void guiguzi::OnnxRuntime::run(
 void guiguzi::OnnxRuntime::run(
     float* blob,                     // 图片数据
     const float& scale,              // 图片缩放
-    std::vector<int>& class_ids,     // 类型
+    std::vector<int>  & class_ids,   // 类型
     std::vector<float>& confidences, // 置信度
     std::vector<cv::Rect>& boxes     // 框
 ) {
-    int64_t signalResultNum = 0;
-    int64_t strideNum       = 0;
-    auto output = this->run(blob, signalResultNum, strideNum);
+    std::vector<int64_t> dims;
+    auto output = this->run(blob, dims);
+    const int64_t& signalResultNum = dims[1];
+    const int64_t& strideNum       = dims[2];
     float* output_data = output.GetTensorMutableData<typename std::remove_pointer<float*>::type>();
     cv::Mat rawData = cv::Mat(signalResultNum, strideNum, CV_32F, output_data);
     rawData = rawData.t();
@@ -199,11 +217,11 @@ void guiguzi::OnnxRuntime::run(
     std::vector<float> confidences_ori; // 置信度
     std::vector<cv::Rect> boxes_ori;    // 框
     for (int index = 0; index < strideNum; ++index) {
-        float* classesScores = data + 4; // x y w h
-        cv::Mat scores(1, this->classes.size(), CV_32FC1, classesScores);
         cv::Point class_id;   // 类别
         double maxConfidence; // 分数
-        cv::minMaxLoc(scores, 0, &maxConfidence, 0, &class_id);
+        float* classesScores = data + 4;
+        cv::Mat scores(1, this->classes.size(), CV_32FC1, classesScores);
+        cv::minMaxLoc(scores, NULL, &maxConfidence, NULL, &class_id);
         if(maxConfidence > this->confidenceThreshold) {
             // 中心x 中心y 宽度 高度
             float x = data[0];

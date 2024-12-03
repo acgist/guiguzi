@@ -9,19 +9,19 @@ guiguzi::Detection::Detection(
     float confidenceThreshold,
     float iouThreshold
 ) : classes(classes) {
-    this->model = std::make_unique<guiguzi::OnnxRuntime>(640, classes, confidenceThreshold, iouThreshold);
-    this->model->createSession(model, logid);
+    this->model = std::make_unique<guiguzi::OnnxRuntime>(640, logid, classes, confidenceThreshold, iouThreshold);
+    this->model->createSession(model);
 }
 
 void guiguzi::Detection::detection(
-    const cv::Mat& image,              // 图片
-    std::vector<int>& class_ids,       // 类型
+    const cv::Mat     & image,         // 图片
+    std::vector<int>  & class_ids,     // 类型
     std::vector<float>& confidences,   // 置信度
-    std::vector<cv::Rect>& boxes // 框
+    std::vector<cv::Rect>& boxes       // 框
 ) {
-    float scale = 1.0F;
+    float scale;
     cv::Mat output;
-    float* blob = guiguzi::formatImage(this->model->wh, image, output, scale);
+    float* blob = guiguzi::formatBlob(this->model->wh, image, output, scale);
     this->model->run(blob, scale, class_ids, confidences, boxes);
     // 修正参数
     for(auto& rect : boxes) {
@@ -36,10 +36,11 @@ void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
     this->detection(image, class_ids, confidences, boxes);
     auto class_id   = class_ids.begin();
     auto confidence = confidences.begin();
-    for(auto& rect : boxes) {
+    for(const auto& rect : boxes) {
         // 人脸识别
         cv::Mat face = image(rect).clone();
-        auto person = recognition.recognition(face);
+        std::vector<cv::Point> points;
+        auto person = recognition.recognition(face, points);
         if(!person.first.empty()) {
             cv::putText(
                 image,
@@ -59,6 +60,17 @@ void guiguzi::Detection::detection(cv::Mat& image, Recognition& recognition) {
                 cv::Scalar(0, 0, 0),
                 2
             );
+            // 描点
+            for(auto& point : points) {
+                point.x += rect.x;
+                point.y += rect.y;
+            }
+            auto point = points.begin();
+            cv::circle(image, point[0], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, point[1], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, point[2], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, point[3], 2, cv::Scalar{ 255, 255, 0 });
+            cv::circle(image, point[4], 2, cv::Scalar{ 255, 255, 0 });
         }
         // 物体检测
         cv::rectangle(image, rect, cv::Scalar{ 255, 0, 0 });

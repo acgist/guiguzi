@@ -66,7 +66,7 @@ int main() {
         capture >> frame;
         detection.detection(frame, recognition);
         cv::imshow("image", frame);
-        auto key = cv::waitKey(10);
+        auto key = cv::waitKey(1);
         if(key == 'q') {
             break;
         }

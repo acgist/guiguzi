@@ -19,21 +19,33 @@ guiguzi::Recognition::Recognition(
     float threshold, float confidenceThreshold, float iouThreshold
 ) : threshold(threshold) {
     std::vector<std::string> classes{ "face" };
-    this->faceModel = std::make_unique<guiguzi::OnnxRuntime>(640, classes, confidenceThreshold, iouThreshold);
-    this->faceModel->createSession(face_model, face_logid);
-    this->featureModel = std::make_unique<guiguzi::OnnxRuntime>(112);
-    this->featureModel->createSession(feature_model, feature_logid);
+    this->faceModel = std::make_unique<guiguzi::OnnxRuntime>(640, face_logid, classes, confidenceThreshold, iouThreshold);
+    this->faceModel->createSession(face_model);
+    this->featureModel = std::make_unique<guiguzi::OnnxRuntime>(112, feature_logid);
+    this->featureModel->createSession(feature_model);
 }
 
 bool guiguzi::Recognition::extract(cv::Mat& image, std::vector<cv::Rect>& boxes, std::vector<cv::Point>& points) {
-    float scale = 1.0F;
-    cv::Mat output = cv::Mat::zeros(image.rows, image.cols, CV_8UC3);
-    float* blob = guiguzi::formatImage(this->faceModel->wh, image, output, scale);
+    float scale;
+    cv::Mat output;
+    float* blob = guiguzi::formatBlob(this->faceModel->wh, image, output, scale);
     this->faceModel->run(blob, scale, boxes, points);
+    if(boxes.empty()) {
+        SPDLOG_DEBUG("没有检测到人脸数据");
+        return false;
+    }
+    if(boxes.size() != 1) {
+        SPDLOG_DEBUG("检测到多张人脸数据");
+        return false;
+    }
+    // 修正参数
+    for(auto& rect : boxes) {
+        guiguzi::fixRect(image, rect);
+    }
     return true;
 }
 
-bool guiguzi::Recognition::center(cv::Mat& image, std::vector<cv::Point>& points) {
+void guiguzi::Recognition::center(cv::Mat& image, std::vector<cv::Point>& points) {
     int min = std::min(image.cols, image.rows);
     cv::Rect rect(0, 0, min, min);
     if(min == image.cols) {
@@ -54,25 +66,23 @@ bool guiguzi::Recognition::center(cv::Mat& image, std::vector<cv::Point>& points
     cv::resize(image, image, cv::Size(this->featureModel->wh, this->featureModel->wh));
     auto M = cv::estimateAffinePartial2D(points, center_mat);
     cv::warpAffine(image, image, M, image.size());
-    return true;
 }
 
 void guiguzi::Recognition::feature(cv::Mat& image, std::vector<float>& feature) {
     cv::Mat output;
     cv::dnn::blobFromImage(image, output, 1.0 / 255.0, cv::Size(this->featureModel->wh, this->featureModel->wh), cv::Scalar(), true, false);
     float* blob = reinterpret_cast<float*>(output.data);
-    int64_t signalResultNum;
-    int64_t strideNum;
-    this->featureModel->run(blob, feature, signalResultNum, strideNum);
+    std::vector<int64_t> dims;
+    this->featureModel->run(blob, feature, dims);
     cv::normalize(feature, feature);
 }
 
-double guiguzi::Recognition::compare(const std::vector<float>& source, const std::vector<float>& target) {
-    double v = 0.0;
+inline double guiguzi::Recognition::compare(const std::vector<float>& source, const std::vector<float>& target) {
+    double ret = 0.0;
     for(int i = 0; i < source.size(); ++i) {
-        v += std::pow((source[i] - target[i]), 2);
+        ret += std::pow((source[i] - target[i]), 2);
     }
-    return v;
+    return ret;
 }
 
 void guiguzi::Recognition::storage(const std::string& name, std::vector<cv::Mat>& images) {
@@ -83,13 +93,8 @@ void guiguzi::Recognition::storage(const std::string& name, std::vector<cv::Mat>
     for(auto& image : images) {
         std::vector<cv::Rect> boxes;
         std::vector<cv::Point> points;
-        this->extract(image, boxes, points);
-        if(boxes.empty()) {
-            SPDLOG_INFO("没有人脸数据：{}", name);
-            continue;
-        }
-        if(boxes.size() != 1) {
-            SPDLOG_INFO("多张人脸数据：{}", name);
+        if(!this->extract(image, boxes, points)) {
+            SPDLOG_WARN("人脸录入失败：{}", name);
             continue;
         }
         auto rect = boxes[0];
@@ -97,18 +102,14 @@ void guiguzi::Recognition::storage(const std::string& name, std::vector<cv::Mat>
             point.x -= rect.x;
             point.y -= rect.y;
         }
-        guiguzi::fixRect(image, rect);
         image = image(rect);
-        if(!this->center(image, points)) {
-            SPDLOG_INFO("人脸数据错误：{}", name);
-            continue;
-        }
+        this->center(image, points);
         std::vector<float> feature;
         this->feature(image, feature);
         features.push_back(feature);
     }
     this->features.emplace(name, features);
-    SPDLOG_DEBUG("人脸特征：{} - {}", name, features.size());
+    SPDLOG_INFO("录入人脸特征：{} - {}", name, features.size());
 }
 
 void guiguzi::Recognition::storage(const std::string& name, const std::vector<std::string>& images) {
@@ -119,40 +120,24 @@ void guiguzi::Recognition::storage(const std::string& name, const std::vector<st
     this->storage(name, mats);
 }
 
-std::pair<std::string, double> guiguzi::Recognition::recognition(cv::Mat& image) {
-    std::vector<cv::Rect> boxes;
+std::pair<std::string, double> guiguzi::Recognition::recognition(cv::Mat& image, std::vector<cv::Point>& points_ori) {
+    std::vector<cv::Rect>  boxes;
     std::vector<cv::Point> points;
-    this->extract(image, boxes, points);
-    if(boxes.empty()) {
+    if(!this->extract(image, boxes, points)) {
+        SPDLOG_DEBUG("人脸识别失败");
         return {};
     }
-    // 描点
-    // auto point = points.begin();
-    // for(const auto& rect : boxes) {
-    //     cv::rectangle(image, rect, cv::Scalar{ 255, 255, 0 });
-    //     cv::circle(image, *point, 2, cv::Scalar{ 255, 255, 0 });
-    //     ++point;
-    //     cv::circle(image, *point, 2, cv::Scalar{ 255, 255, 0 });
-    //     ++point;
-    //     cv::circle(image, *point, 2, cv::Scalar{ 255, 255, 0 });
-    //     ++point;
-    //     cv::circle(image, *point, 2, cv::Scalar{ 255, 255, 0 });
-    //     ++point;
-    //     cv::circle(image, *point, 2, cv::Scalar{ 255, 255, 0 });
-    //     ++point;
-    // }
     auto rect = boxes[0];
     for(auto& point : points) {
+        points_ori.push_back(point);
         point.x -= rect.x;
         point.y -= rect.y;
     }
-    guiguzi::fixRect(image, rect);
     image = image(rect);
-    if(!this->center(image, points)) {
-        return {};
-    }
+    this->center(image, points);
     std::vector<float> feature;
     this->feature(image, feature);
+    // 比较特征
     std::string retk;
     double retv = 100.0;
     for(const auto&[ k, v ] : this->features) {

@@ -1,5 +1,5 @@
 /**
- * 人脸识别 + 物体检测
+ * 物体检测 + 人脸识别
  */
 
 #include <map>
@@ -9,7 +9,6 @@
 #include <cstdlib>
 
 #include "opencv2/core/mat.hpp"
-#include "opencv2/core/types.hpp"
 
 namespace Ort {
 
@@ -22,9 +21,24 @@ namespace Ort {
 
 namespace guiguzi {
 
-// 处理图片
-extern float* formatImage(int wh, const cv::Mat& source, cv::Mat& target, float& scale);
-extern void   fixRect(const::cv::Mat& image, cv::Rect& rect);
+/**
+ * 修正图片选择范围
+ * 
+ * @param image 图片
+ * @param rect  选择范围
+ */
+extern void fixRect(const::cv::Mat& image, cv::Rect& rect);
+/**
+ * 图片转为blob
+ * 
+ * @param wh     图片高宽
+ * @param source 原始图片
+ * @param target 目标图片
+ * @param scale  图片缩放
+ * 
+ * @return 目标数据等于target.data（不用释放）
+ */
+extern float* formatBlob(const int& wh, const cv::Mat& source, cv::Mat& target, float& scale);
 
 /**
  * ONNX运行环境
@@ -32,38 +46,56 @@ extern void   fixRect(const::cv::Mat& image, cv::Rect& rect);
 class OnnxRuntime {
 
 public:
-    Ort::Env       * env       { nullptr }; // ONNX环境
-    Ort::Session   * session   { nullptr }; // ONNX会话
-    Ort::RunOptions* runOptions{ nullptr }; // ONNX运行配置
+    int wh;            // 高宽
+    const char* logid; // 日志ID
+    Ort::Session   * session   { nullptr };   // ONNX会话
+    Ort::RunOptions* runOptions{ nullptr };   // ONNX配置
     std::vector<const char*> inputNodeNames;  // ONNX输入参数
     std::vector<const char*> outputNodeNames; // ONNX输出参数
-    std::vector<int64_t>     inputNodeDims { 1, 3 }; // 输入参数维度
-    int wh;
+    std::vector<int64_t>     inputNodeDims{ 1, 3 }; // 输入参数维度
     std::vector<std::string> classes; // 分类
     float confidenceThreshold = 0.4F; // 置信度阈值
     float iouThreshold        = 0.6F; // IOU阈值
 
 public:
-    OnnxRuntime(int wh);
-    OnnxRuntime(int wh, const std::vector<std::string>& classes, float confidenceThreshold = 0.4F, float iouThreshold = 0.6F);
+    OnnxRuntime(
+        int wh,
+        const char* logid = "aliang",
+        const std::vector<std::string>& classes = {},
+        float confidenceThreshold = 0.4F,
+        float iouThreshold        = 0.6F
+    );
     virtual ~OnnxRuntime();
 
 public:
-    // 创建会话
-    bool createSession(const std::string& path, const char* logid);
+    /**
+     * 创建会话
+     * 
+     * @param path 模型路径
+     * 
+     * @return 是否成功
+     */
+    bool createSession(const std::string& path);
     // 执行计算
-    Ort::Value run(float* blob, int64_t& signalResultNum, int64_t& strideNum);
-    void       run(float* blob, std::vector<float>& ret, int64_t& signalResultNum, int64_t& strideNum);
-    void       run(
+    Ort::Value run(
+        float* blob,               // 图片数据
+        std::vector<int64_t>& dims // 结果维度
+    );
+    void run(
+        float* blob,               // 图片数据
+        std::vector<float>&   ret, // 结果数据
+        std::vector<int64_t>& dims // 结果维度
+    );
+    void run(
         float* blob,                   // 图片数据
         const float& scale,            // 图片缩放
-        std::vector<cv::Rect>& boxes,  // 框
+        std::vector<cv::Rect> & boxes, // 框
         std::vector<cv::Point>& points // 关键点：眼睛、鼻子、嘴巴
     );
-    void       run(
+    void run(
         float* blob,                     // 图片数据
         const float& scale,              // 图片缩放
-        std::vector<int>& class_ids,     // 类型
+        std::vector<int>  & class_ids,   // 类型
         std::vector<float>& confidences, // 置信度
         std::vector<cv::Rect>& boxes     // 框
     );
@@ -83,17 +115,23 @@ public:
     std::unique_ptr<OnnxRuntime> model{ nullptr }; // 检测模型
 
 public:
-    Detection(const std::string& model, const char* logid, const std::vector<std::string>& classes, float confidenceThreshold = 0.4F, float iouThreshold = 0.6F);
+    Detection(
+        const std::string& model,
+        const char* logid,
+        const std::vector<std::string>& classes,
+        float confidenceThreshold = 0.4F,
+        float iouThreshold = 0.6F
+    );
 
 public:
-    // 物体识别
+    // 物体检测
     void detection(
-        const cv::Mat& image,            // 图片
-        std::vector<int>& class_ids,     // 类型
+        const cv::Mat     & image,       // 图片
+        std::vector<int>  & class_ids,   // 类型
         std::vector<float>& confidences, // 置信度
         std::vector<cv::Rect>& boxes     // 框
     );
-    // 物体识别标记
+    // 物体检测和人脸识别
     void detection(cv::Mat& image, Recognition& recognition);
 
 };
@@ -104,7 +142,7 @@ public:
 class Recognition {
 
 public:
-    float threshold = 0.8F; // 阈值
+    float threshold = 0.8F; // 识别阈值
     std::unique_ptr<OnnxRuntime> faceModel   { nullptr }; // 人脸模型
     std::unique_ptr<OnnxRuntime> featureModel{ nullptr }; // 特征模型
     std::map<std::string, std::vector<std::vector<float>>> features; // 特征
@@ -120,7 +158,7 @@ public:
     // 人脸提取
     bool extract(cv::Mat& image, std::vector<cv::Rect>& boxes, std::vector<cv::Point>& points);
     // 人脸居中
-    bool center(cv::Mat& image, std::vector<cv::Point>& points);
+    void center(cv::Mat& image, std::vector<cv::Point>& points);
     // 特征提取
     void feature(cv::Mat& image, std::vector<float>& feature);
     // 特征比较
@@ -129,7 +167,7 @@ public:
     void storage(const std::string& name, std::vector<cv::Mat>& images);
     void storage(const std::string& name, const std::vector<std::string>& images);
     // 人脸识别
-    std::pair<std::string, double> recognition(cv::Mat& image);
+    std::pair<std::string, double> recognition(cv::Mat& image, std::vector<cv::Point>& points_ori);
 
 };
 
