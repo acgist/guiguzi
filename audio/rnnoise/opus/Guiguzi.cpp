@@ -43,11 +43,11 @@ bool guiguzi::Rnnoise::init() {
         std::cout << "打开编码器失败：" << error_code << '\n';
         return false;
     }
-    opus_encoder_ctl(this->encoder, OPUS_SET_DTX(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_DTX(0));
     // opus_encoder_ctl(this->encoder, OPUS_SET_VBR(1));
     opus_encoder_ctl(this->encoder, OPUS_SET_BITRATE(64'000));
     opus_encoder_ctl(this->encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-    opus_encoder_ctl(this->encoder, OPUS_SET_INBAND_FEC(1));
+    opus_encoder_ctl(this->encoder, OPUS_SET_INBAND_FEC(0));
     opus_encoder_ctl(this->encoder, OPUS_SET_LSB_DEPTH(this->bits));
     return true;
 }
