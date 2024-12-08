@@ -19,7 +19,9 @@ static std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> mag_pha_stft(
 ) {
     auto window = torch::hann_window(win_size);
     auto stft_spec = torch::stft(y, n_fft, hop_size, win_size, window, true, "reflect", false, std::nullopt, true);
-    stft_spec = torch::view_as_real(stft_spec);
+    stft_spec = torch::view_as_real(stft_spec); // 恢复具有额外最后一个维度（表示实部和虚部）的实数张量
+    // spec[:, :, :, 0] #实部
+    // spec[:, :, :, 1] #虚部
     auto mag = torch::sqrt(stft_spec.pow(2).sum(-1) + (1e-9));
     auto pha = torch::atan2(stft_spec.index({"...", 1}), stft_spec.index({"...", 0}) + (1e-5));
     mag = torch::pow(mag, compress_factor);
@@ -47,6 +49,7 @@ int main() {
     std::ofstream output;
     input .open("D:/tmp/noise.pcm",   std::ios_base::binary);
     output.open("D:/tmp/denoise.pcm", std::ios_base::binary | std::ios_base::app);
+    int seconds = 1;
     int size = 16000;
     std::vector<short> data;
     std::vector<float> data_f;
@@ -75,8 +78,10 @@ int main() {
 
         result = result / norm_factor;
         result = result * 32768.0F;
-        std::memcpy(data_f.data(), result.data_ptr(), size * sizeof(float));
-        std::copy_n(data_f.data(), size, data.data());
+        float* data_f_ptr = reinterpret_cast<float*>(result.data_ptr());
+        std::copy_n(data_f_ptr, size, data.data());
+        // std::memcpy(data_f.data(), result.data_ptr(), size * sizeof(float));
+        // std::copy_n(data_f.data(), size, data.data());
         output.write(reinterpret_cast<char*>(data.data()), size * sizeof(short));
         output.flush();
     }
@@ -113,7 +118,7 @@ ans = pipeline(
 
 model = OnnxModel(ans)
 
-seconds = 2
+seconds = 1
 f = 201
 t = 160 * seconds + 1
 noisy_mag, noisy_pha = torch.randn(1, f, t), torch.randn(1, f, t)
