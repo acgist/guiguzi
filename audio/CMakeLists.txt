@@ -1,6 +1,19 @@
 add_subdirectory(rnnoise/rnnoise)
 
 add_executable(
+    testZipenhancer
+    zipenhancer/Main.cpp
+)
+add_test(NAME testZipenhancer COMMAND testZipenhancer)
+set_target_properties(testZipenhancer PROPERTIES FOLDER "audio")
+target_link_libraries(
+    testZipenhancer
+    rnnoise
+    ${TORCH_LIBRARIES}
+    ${ONNXRUNTIME_LIBS}
+)
+
+add_executable(
     testRnnoise
     rnnoise/Main.cpp
     rnnoise/guiguzi/Guiguzi.cpp
