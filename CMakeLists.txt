@@ -133,10 +133,10 @@ if(CMAKE_HOST_WIN32)
 
     file(GLOB ONNXRUNTIME_LIBS "deps/onnxruntime/lib/onnxruntime.lib")
 
+    find_package(Opus   REQUIRED)
     find_package(FFMPEG REQUIRED)
 endif()
 
-find_package(Opus  REQUIRED)
 find_package(Torch  REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)

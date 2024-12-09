@@ -73,7 +73,7 @@ bool guiguzi::OnnxRuntime::createSession(const std::string& path) {
     std::wstring wPath(path.begin(), path.end());
     this->session = new Ort::Session(*env, wPath.c_str(), options);
     #else
-    this->session = new Ort::Session(*env, path, options);
+    this->session = new Ort::Session(*env, path.c_str(), options);
     #endif
     Ort::AllocatorWithDefaultOptions allocator;
     const size_t inputNodeCount  = this->session->GetInputCount();
