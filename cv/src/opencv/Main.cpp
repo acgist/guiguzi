@@ -174,6 +174,10 @@ constexpr static int timeDuration = 1000 / 25;
     cv::Mat input[] { rgb[0], fill, fill };
     cv::merge(input, 3, output);
     cv::imshow("rgb", output);
+    cv::Mat imagex(128, 128, CV_8UC3);
+    // imagex.setTo(cv::Scalar(255, 0, 0)); // BGR
+    imagex.setTo(cv::Scalar(0, 0, 255)); // BGR
+    cv::imshow("imagex", imagex);
 }
 
 int main() {
