@@ -47,6 +47,17 @@ target_link_libraries(
 )
 
 add_executable(
+    testRange
+    src/opencv/Range.cpp
+)
+add_test(NAME testRange COMMAND testRange)
+set_target_properties(testRange PROPERTIES FOLDER "cv")
+target_link_libraries(
+    testRange
+    guiguziboot
+)
+
+add_executable(
     testVideoCapture
     src/video-capture/Main.cpp
 )
@@ -84,3 +95,6 @@ target_link_libraries(
     testFaceRecognition
     guiguziboot
 )
+
+add_subdirectory(src/track/onnx)
+add_subdirectory(src/track/opencv)
