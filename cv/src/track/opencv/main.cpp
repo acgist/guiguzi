@@ -2,8 +2,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-//#include <cuda_provider_factory.h>
-#include <onnxruntime_cxx_api.h>
+#include <opencv2/dnn.hpp>
 #include <float.h>
 #include <stdio.h>
 #include <vector>
@@ -12,7 +11,7 @@
 
 using namespace cv;
 using namespace std;
-using namespace Ort;
+using namespace dnn;
 
 struct GridAndStride
 {
@@ -78,9 +77,10 @@ public:
     yolox();
     int detect(cv::Mat &img, std::vector<Object> &detectResults);
 private:
+    const int INPUT_W = 1088;
+    const int INPUT_H = 608;
     const float mean_vals[3] = {0.485, 0.456, 0.406};
     const float norm_vals[3] = {0.229, 0.224, 0.225};
-    vector<float> input_image_;
     const int stride_arr[3] = {8, 16, 32}; // might have stride=64 in YOLOX
     std::vector<GridAndStride> grid_strides;
 
@@ -88,56 +88,17 @@ private:
     void generate_grids_and_stride(std::vector<int>& strides);
     void generate_yolox_proposals(const float* feat_ptr, std::vector<Object>& objects);
     void nms_sorted_bboxes(const std::vector<Object>& faceobjects, std::vector<int>& picked);
-
     float nms_threshold = 0.7;
     float prob_threshold = 0.1;
     int num_grid;
     int num_class;
-    int INPUT_W;
-    int INPUT_H;
-    Session *session_;
-    Env env = Env(ORT_LOGGING_LEVEL_ERROR, "yolox");
-    SessionOptions sessionOptions = SessionOptions();
-    vector<char*> input_names;
-    vector<char*> output_names;
+    Net net;
 };
 
 yolox::yolox()
 {
-    string model_path = "/home/ByteTrack/byte_tracker/model/bytetrack_s.onnx";
-    //OrtStatus* status = OrtSessionOptionsAppendExecutionProvider_CUDA(sessionOptions, 0);
-    sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_BASIC);
-    session_ = new Session(env, model_path.c_str(), sessionOptions);
-    size_t numInputNodes = session_->GetInputCount();
-    size_t numOutputNodes = session_->GetOutputCount();
-    AllocatorWithDefaultOptions allocator;
-    vector<vector<int64_t>> input_node_dims; // >=1 outputs
-    for(int i=0;i<numInputNodes;i++)
-    {
-        input_names.push_back(session_->GetInputName(i, allocator));
-        Ort::TypeInfo input_type_info = session_->GetInputTypeInfo(i);
-		auto input_tensor_info = input_type_info.GetTensorTypeAndShapeInfo();
-		auto input_dims = input_tensor_info.GetShape();
-		input_node_dims.push_back(input_dims);
-    }
-    vector<vector<int64_t>> output_node_dims; // >=1 outputs
-    for(int i=0;i<numOutputNodes;i++)
-    {
-        output_names.push_back(session_->GetOutputName(i, allocator));
-        Ort::TypeInfo output_type_info = session_->GetOutputTypeInfo(i);
-		auto output_tensor_info = output_type_info.GetTensorTypeAndShapeInfo();
-		auto output_dims = output_tensor_info.GetShape();
-		output_node_dims.push_back(output_dims);
-		/*for (int j = 0; j < output_dims.size(); j++)
-		{
-			cout << output_dims[j] << ",";
-		}
-		cout << endl;*/
-    }
-    this->INPUT_H = input_node_dims[0][2];
-    this->INPUT_W = input_node_dims[0][3];
-    num_grid = output_node_dims[0][1];
-    num_class = output_node_dims[0][2] - 5;
+    string model_path = "D:/tmp/bytetracker.onnx";
+    this->net = readNet(model_path);
     std::vector<int> strides(stride_arr, stride_arr + sizeof(stride_arr) / sizeof(stride_arr[0]));
     generate_grids_and_stride(strides);
 }
@@ -256,26 +217,26 @@ int yolox::detect(cv::Mat &srcimg, std::vector<Object>& objects)
 {
     float scale = min(INPUT_W / (srcimg.cols*1.0), INPUT_H / (srcimg.rows*1.0));
     Mat img = static_resize(srcimg);
-    int row = img.rows;
-    int col = img.cols;
-    this->input_image_.resize(row * col * img.channels());
-    for (int c = 0; c < 3; c++)
-    {
-        for (int i = 0; i < row; i++)
-        {
-            for (int j = 0; j < col; j++)
-            {
-                float pix = img.ptr<uchar>(i)[j * 3 + 2 - c];
-                this->input_image_[c * row * col + i * col + j] = (pix / 255.0 - mean_vals[c]) / norm_vals[c];
-            }
+    img.convertTo(img, CV_32F);
+	int i = 0, j = 0;
+    for (i = 0; i < img.rows; i++)
+	{
+		float* pdata = (float*)(img.data + i * img.step);
+		for (j = 0; j < img.cols; j++)
+		{
+		    pdata[0] = (pdata[2] / 255.0 - this->mean_vals[0]) / this->norm_vals[0];
+			pdata[1] = (pdata[1] / 255.0 - this->mean_vals[1]) / this->norm_vals[1];
+			pdata[2] = (pdata[0] / 255.0 - this->mean_vals[2]) / this->norm_vals[2];
+			pdata += 3;
         }
     }
-    array<int64_t, 4> input_shape_{1, 3, row, col};
-    auto allocator_info = MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-    Value input_tensor_ = Value::CreateTensor<float>(allocator_info, input_image_.data(), input_image_.size(), input_shape_.data(), input_shape_.size());
-    vector<Value> ort_outputs = session_->Run(RunOptions{nullptr}, &input_names[0], &input_tensor_, 1, output_names.data(), output_names.size());
-
-    const float* out = ort_outputs[0].GetTensorMutableData<float>();
+    Mat blob = blobFromImage(img);
+	this->net.setInput(blob);
+	vector<Mat> outs;
+	this->net.forward(outs, this->net.getUnconnectedOutLayersNames());
+    this->num_grid = outs[0].size[1];
+    this->num_class = outs[0].size[2] - 5;
+    const float* out = (float*)outs[0].data;
     std::vector<Object> proposals;
     generate_yolox_proposals(out, proposals);
     // sort all proposals by score from highest to lowest
@@ -315,14 +276,14 @@ int yolox::detect(cv::Mat &srcimg, std::vector<Object>& objects)
 
 int main(int argc, char** argv)
 {
-    if (argc != 2)
-    {
-        fprintf(stderr, "Usage: %s [videopath]\n", argv[0]);
-        return -1;
+    VideoCapture cap;
+    if(argc > 1) {
+        const char* videopath = argv[1];
+        cap.open(videopath);
+    } else {
+        cap.open("D:/tmp/sample.mp4");
+        // cap.open("D:/tmp/monitoring.mp4");
     }
-
-    const char* videopath = argv[1];
-    VideoCapture cap(videopath);
 	if (!cap.isOpened())
 		return 0;
 
@@ -332,7 +293,7 @@ int main(int argc, char** argv)
     long nFrame = static_cast<long>(cap.get(CAP_PROP_FRAME_COUNT));
     cout << "Total frames: " << nFrame << ", fps: "<<fps<<endl;
 
-    VideoWriter writer("demo.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps, Size(img_w, img_h));
+    // VideoWriter writer("demo.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps, Size(img_w, img_h));
 
     Mat img;
     yolox yolox;
@@ -367,14 +328,16 @@ int main(int argc, char** argv)
 			if (tlwh[2] * tlwh[3] > 20 && !vertical)
 			{
 				Scalar s = tracker.get_color(output_stracks[i].track_id);
-				putText(img, format("%d", output_stracks[i].track_id), Point(tlwh[0], tlwh[1] - 5), 
+				putText(img, std::format("%d", output_stracks[i].track_id), Point(tlwh[0], tlwh[1] - 5), 
                         0, 0.6, Scalar(0, 0, 255), 2, LINE_AA);
                 rectangle(img, Rect(tlwh[0], tlwh[1], tlwh[2], tlwh[3]), s, 2);
 			}
 		}
-        putText(img, format("frame: %d fps: %d num: %d", num_frames, num_frames * 1000000 / total_ms, (int)output_stracks.size()),
+        putText(img, std::format("frame: %d fps: %d num: %d", num_frames, num_frames * 1000000 / total_ms, (int)output_stracks.size()),
                 Point(0, 30), 0, 0.6, Scalar(0, 0, 255), 2, LINE_AA);
-        writer.write(img);
+        cv::imshow("image", img);
+        cv::waitKey(20);
+        // writer.write(img);
         /*char c = waitKey(1);
         if (c > 0)
         {

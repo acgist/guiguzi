@@ -96,5 +96,5 @@ target_link_libraries(
     guiguziboot
 )
 
-add_subdirectory(src/track/onnx)
-add_subdirectory(src/track/opencv)
+add_subdirectory(src/track)
+add_subdirectory(src/track/bytetracker)

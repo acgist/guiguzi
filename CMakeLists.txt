@@ -113,6 +113,7 @@ if(CMAKE_HOST_WIN32)
         CMAKE_PREFIX_PATH
         ${CMAKE_PREFIX_PATH}
         deps/opus
+        deps/eigen3
         deps/opencv
         deps/spdlog
     )
@@ -140,6 +141,7 @@ endif()
 find_package(Torch  REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_subdirectory(cv)
 add_subdirectory(nlp)
